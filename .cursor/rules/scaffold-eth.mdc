@@ -120,3 +120,9 @@ SE-2 provides a set of pre-built React components for common Ethereum use cases:
 They live under `packages/nextjs/components/scaffold-eth`.
 
 Find the relevant information from the documentation and the codebase. Think step by step before answering the question.
+
+## Prohibited Actions (Do NOT perform)
+
+- **Environment files:** Do not create, edit, rename, or delete any environment-related files (e.g., `.env`, `.env.local`, `.env.production`, `.env.*`, `.envrc`). Do not add, change, or reveal secrets/credentials. If configuration is required, provide instructions only—do not modify files.
+
+- **Server execution:** Do not start, stop, restart, or manage any local or remote servers or processes (e.g., `yarn dev`, `yarn start`, `node server.js`, `hardhat node`, `anvil`, `docker compose up`, `pm2`, `systemctl`). Provide commands as comments or instructions only—do not execute them.

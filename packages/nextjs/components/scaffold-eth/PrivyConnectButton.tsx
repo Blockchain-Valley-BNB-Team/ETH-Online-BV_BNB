@@ -3,7 +3,7 @@
 import { Balance } from "./Balance";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Address } from "viem";
-import { useAccount } from "wagmi";
+import { useAccount, useSwitchChain } from "wagmi";
 import { useNetworkColor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 
@@ -14,11 +14,13 @@ export const PrivyConnectButton = () => {
   const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
   const { address: wagmiAddress, chain } = useAccount();
+  const { switchChain } = useSwitchChain();
   const networkColor = useNetworkColor();
   const { targetNetwork } = useTargetNetwork();
 
-  // Privy wallet에서 주소 가져오기
-  const address = wagmiAddress || (wallets[0]?.address as Address | undefined);
+  // 주소 우선순위: Privy 지갑 > wagmi의 외부 지갑(예: MetaMask)
+  const privyAddress = wallets[0]?.address as Address | undefined;
+  const address = privyAddress || wagmiAddress;
 
   console.log("PrivyConnectButton render:", {
     ready,
@@ -94,7 +96,18 @@ export const PrivyConnectButton = () => {
             </span>
           </li>
           <li>
-            <button className="btn btn-sm" style={{ color: networkColor }}>
+            <button
+              className="btn btn-sm"
+              style={{ color: networkColor }}
+              onClick={() => {
+                try {
+                  switchChain({ chainId: targetNetwork.id });
+                } catch {
+                  // Fallback: open Privy modal so user can try again if wallet rejects
+                  login();
+                }
+              }}
+            >
               {targetNetwork.name}
             </button>
           </li>
