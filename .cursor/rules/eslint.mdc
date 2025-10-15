@@ -1,0 +1,48 @@
+---
+description: Enforce ESLint (Flat) + Prettier rules for all generated/edited code
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.jsx"
+alwaysApply: true
+---
+
+# Lint & Format Compliance (Mandatory)
+
+You MUST ensure that all generated or edited code passes the project's ESLint Flat config and Prettier formatting **without introducing new violations**.
+
+## What to follow
+
+- ESLint config file: `eslint.config.js` (Flat config via `defineConfig`)
+- Plugins/extends:
+  - Use `@eslint/eslintrc` compatibility (`FlatCompat`) for:
+    - `"next/core-web-vitals"`, `"next/typescript"`, `"prettier"`
+  - Use `eslint-plugin-prettier` as configured
+- Selected rules in this project (do NOT change them):
+  - `"@typescript-eslint/no-explicit-any": "off"`
+  - `"@typescript-eslint/ban-ts-comment": "off"`
+  - `"prettier/prettier": ["warn", { "endOfLine": "auto" }]`
+
+## Required behavior
+
+1. **Never** add or modify ESLint/Prettier settings unless explicitly asked.
+2. Write code so that **`eslint` passes cleanly** under the current config.
+3. **Apply Prettier formatting** (respect `"endOfLine": "auto"`).
+4. If a snippet would trigger lint errors, **rewrite it** to be compliant before returning it.
+5. Keep imports, types, and component structure compatible with **Next.js App Router + TypeScript** presets from `next/core-web-vitals` and `next/typescript`.
+6. When suggesting commands, provide them as instructions only (do NOT execute).
+
+## Examples
+
+- ✅ Allowed: Using `any` or `// @ts-expect-error` sparingly when appropriate (rules are off), but still prefer precise typing when feasible.
+- ✅ Ensure files are formatted by Prettier (no manual line-ending assumptions).
+- ❌ Do NOT introduce code that fails `prettier/prettier` or Next.js ESLint checks.
+- ❌ Do NOT propose changing `eslint.config.js`, `prettier` settings, or related dependencies unless the user explicitly requests it.
+
+## Output checklist (before you respond)
+
+- [ ] Code compiles and conforms to `next/typescript` expectations.
+- [ ] ESLint violations: **0 newly introduced**.
+- [ ] Prettier formatting applied (EOL: `auto`).
+- [ ] No changes to ESLint/Prettier config files.

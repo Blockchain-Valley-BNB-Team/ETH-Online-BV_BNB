@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { useWallets } from "@privy-io/react-auth";
+import { WagmiProvider, useSetActiveWallet } from "@privy-io/wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { useTheme } from "next-themes";
 import { Toaster } from "react-hot-toast";
-import { WagmiProvider } from "wagmi";
+import { foundry } from "viem/chains";
+import { useAccount } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
-import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { useInitializeNativeCurrencyPrice } from "~~/hooks/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
@@ -36,6 +38,25 @@ export const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Privy ↔ wagmi 활성 지갑 동기화 브리지
+ */
+const PrivyWagmiBridge = () => {
+  const { wallets } = useWallets();
+  const { setActiveWallet } = useSetActiveWallet();
+  const { address } = useAccount();
+
+  useEffect(() => {
+    const embedded = wallets.find(w => (w as any).walletClientType?.startsWith("privy"));
+    if (!embedded) return;
+    if (!address || address.toLowerCase() !== embedded.address.toLowerCase()) {
+      setActiveWallet(embedded as any).catch(() => void 0);
+    }
+  }, [wallets, address, setActiveWallet]);
+
+  return null;
+};
+
 export const ScaffoldEthAppWithProviders = ({ children }: { children: React.ReactNode }) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
@@ -46,16 +67,31 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
   }, []);
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <PrivyProvider
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
+      config={{
+        loginMethods: ["email", "wallet", "google", "twitter"],
+        appearance: {
+          theme: mounted ? (isDarkMode ? "dark" : "light") : "light",
+          accentColor: "#2299dd",
+        },
+        supportedChains: [foundry],
+        defaultChain: foundry,
+        embeddedWallets: {
+          ethereum: {
+            // 로그인 시 (아직 지갑이 없는) 사용자에게 Privy 내장 지갑 생성 유도
+            createOnLogin: "users-without-wallets",
+          },
+        },
+      }}
+    >
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          avatar={BlockieAvatar}
-          theme={mounted ? (isDarkMode ? darkTheme() : lightTheme()) : lightTheme()}
-        >
+        <WagmiProvider config={wagmiConfig}>
           <ProgressBar height="3px" color="#2299dd" />
+          <PrivyWagmiBridge />
           <ScaffoldEthApp>{children}</ScaffoldEthApp>
-        </RainbowKitProvider>
+        </WagmiProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </PrivyProvider>
   );
 };

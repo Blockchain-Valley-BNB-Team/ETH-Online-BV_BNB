@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 
@@ -11,7 +11,6 @@ It's a yarn monorepo that contains following packages:
 - FOUNDRY (`packages/foundry`): The solidity framework to write, test and deploy EVM Smart Contracts.
 - NextJS (`packages/nextjs`): The UI framework extended with utilities to make interacting with Smart Contracts easy (using Next.js App Router, not Pages Router).
 
-
 The usual dev flow is:
 
 - Start SE-2 locally:
@@ -20,7 +19,7 @@ The usual dev flow is:
   - `yarn start`: Starts the frontend
 - Write a Smart Contract (modify the deployment script in `packages/foundry/script` if needed)
 - Deploy it locally (`yarn deploy`)
-- Go to the `http://locahost:3000/debug` page to interact with your contract with a nice UI
+- Go to the `http://localhost:3000/debug` page to interact with your contract with a nice UI
 - Iterate until you get the functionality you want in your contract
 - Write tests for the contract in `packages/foundry/test`
 - Create your custom UI using all the SE-2 components, hooks, and utilities.
@@ -29,12 +28,15 @@ The usual dev flow is:
   - You can tweak which network the frontend is pointing (and some other configurations) in `scaffold.config.ts`
 
 ## Smart Contract UI interactions guidelines
+
 SE-2 provides a set of hooks that facilitates contract interactions from the UI. It reads the contract data from `deployedContracts.ts` and `externalContracts.ts`, located in `packages/nextjs/contracts`.
 
 ### Reading data from a contract
-Use the `useScaffoldReadContract` (`packages/nextjs/hooks/scaffold-eth/useScaffoldReadContract.ts`) hook. 
+
+Use the `useScaffoldReadContract` (`packages/nextjs/hooks/scaffold-eth/useScaffoldReadContract.ts`) hook.
 
 Example:
+
 ```typescript
 const { data: someData } = useScaffoldReadContract({
   contractName: "YourContract",
@@ -44,11 +46,14 @@ const { data: someData } = useScaffoldReadContract({
 ```
 
 ### Writing data to a contract
+
 Use the `useScaffoldWriteContract` (`packages/nextjs/hooks/scaffold-eth/useScaffoldWriteContract.ts`) hook.
+
 1. Initilize the hook with just the contract name
 2. Call the `writeContractAsync` function.
 
 Example:
+
 ```typescript
 const { writeContractAsync: writeYourContractAsync } = useScaffoldWriteContract(
   { contractName: "YourContract" }
@@ -62,6 +67,7 @@ await writeContractAsync({
 ```
 
 Never use any other patterns for contract interaction. The hooks are:
+
 - useScaffoldReadContract (for reading)
 - useScaffoldWriteContract (for writing)
 
@@ -99,9 +105,13 @@ The `data` property consists of an array of events and can be displayed as:
 ```
 
 ### Other Hooks
+
 SE-2 also provides other hooks to interact with blockchain data: `useScaffoldWatchContractEvent`, `useScaffoldEventHistory`, `useDeployedContractInfo`, `useScaffoldContract`, `useTransactor`. They live under `packages/nextjs/hooks/scaffold-eth`.
+
 ## Display Components guidelines
-SE-2 provides a set of pre-built React components for common Ethereum use cases: 
+
+SE-2 provides a set of pre-built React components for common Ethereum use cases:
+
 - `Address`: Always use this when displaying an ETH address
 - `AddressInput`: Always use this when users need to input an ETH address
 - `Balance`: Display the ETH/USDC balance of a given address
@@ -110,3 +120,9 @@ SE-2 provides a set of pre-built React components for common Ethereum use cases:
 They live under `packages/nextjs/components/scaffold-eth`.
 
 Find the relevant information from the documentation and the codebase. Think step by step before answering the question.
+
+## Prohibited Actions (Do NOT perform)
+
+- **Environment files:** Do not create, edit, rename, or delete any environment-related files (e.g., `.env`, `.env.local`, `.env.production`, `.env.*`, `.envrc`). Do not add, change, or reveal secrets/credentials. If configuration is required, provide instructions only—do not modify files.
+
+- **Server execution:** Do not start, stop, restart, or manage any local or remote servers or processes (e.g., `yarn dev`, `yarn start`, `node server.js`, `hardhat node`, `anvil`, `docker compose up`, `pm2`, `systemctl`). Provide commands as comments or instructions only—do not execute them.
