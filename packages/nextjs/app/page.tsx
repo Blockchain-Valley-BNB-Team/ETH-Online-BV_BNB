@@ -1,72 +1,109 @@
-"use client";
-
 import Link from "next/link";
-import type { NextPage } from "next";
-import { useAccount } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { Address } from "~~/components/scaffold-eth";
+import { Footer } from "@/components/Footer";
+import { Navigation } from "@/components/navigation";
+import { NetworkVisualization } from "@/components/network-visualization";
+import { Button } from "@/components/ui/button";
+import { BookOpen, FileText, LayoutDashboard, MessageSquare } from "lucide-react";
 
-const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
-
+export default function LandingPage() {
   return (
-    <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-          </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address address={connectedAddress} />
-          </div>
+    <div className="min-h-screen">
+      <Navigation />
 
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <NetworkVisualization />
+
+        <div className="relative z-10 container mx-auto px-4 py-32 text-center">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <h1 className="text-5xl md:text-7xl font-bold text-balance leading-tight">
+              Science. On-Chain. <span className="text-accent">Open to All.</span>
+            </h1>
+
+            <p className="text-xl md:text-2xl text-muted-foreground text-balance max-w-2xl mx-auto">
+              Building an open, verifiable future for scientific research
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-8">
+              <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="mr-2 h-5 w-5" />
+                  Dashboard
+                </Link>
+              </Button>
+
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent"
+              >
+                <Link href="/gitbook">
+                  <BookOpen className="mr-2 h-5 w-5" />
+                  GitBook
+                </Link>
+              </Button>
+
+              <Button size="lg" variant="outline" asChild className="border-white/20 hover:bg-white/10 bg-transparent">
+                <Link href="/discord">
+                  <MessageSquare className="mr-2 h-5 w-5" />
+                  Discord
+                </Link>
+              </Button>
+
+              <Button size="lg" variant="outline" asChild className="border-white/20 hover:bg-white/10 bg-transparent">
+                <Link href="/docs">
+                  <FileText className="mr-2 h-5 w-5" />
+                  Docs
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
 
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
+        {/* Gradient overlay for depth */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background pointer-events-none" />
+      </section>
+
+      {/* Features Section */}
+      <section className="relative py-24 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="p-8 rounded-lg border border-white/10 bg-card/50 backdrop-blur-sm hover:border-accent/50 transition-colors">
+              <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
+                <div className="w-6 h-6 rounded-full bg-accent" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Decentralized Research</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Store and verify scientific data on-chain, ensuring transparency and immutability for all research
+                outputs.
               </p>
             </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
+
+            <div className="p-8 rounded-lg border border-white/10 bg-card/50 backdrop-blur-sm hover:border-accent/50 transition-colors">
+              <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
+                <div className="w-6 h-6 rounded-full bg-accent" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Open Collaboration</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Join research DAOs and contribute to groundbreaking scientific discoveries with global teams.
+              </p>
+            </div>
+
+            <div className="p-8 rounded-lg border border-white/10 bg-card/50 backdrop-blur-sm hover:border-accent/50 transition-colors">
+              <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
+                <div className="w-6 h-6 rounded-full bg-accent" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Verifiable Results</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Every analysis, dataset, and finding is cryptographically verified and permanently accessible.
               </p>
             </div>
           </div>
         </div>
-      </div>
-    </>
+      </section>
+
+      <Footer />
+    </div>
   );
-};
-
-export default Home;
+}
