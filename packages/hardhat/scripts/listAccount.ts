@@ -1,8 +1,6 @@
-import * as dotenv from "dotenv";
-dotenv.config();
+import "dotenv/config";
 import { ethers, Wallet } from "ethers";
 import QRCode from "qrcode";
-import { config } from "hardhat";
 import password from "@inquirer/password";
 
 async function main() {
@@ -28,6 +26,8 @@ async function main() {
   console.log("Public address:", address, "\n");
 
   // Balance on each network
+  // Hardhat 3: config를 동적으로 import
+  const { config } = await import("hardhat");
   const availableNetworks = config.networks;
   for (const networkName in availableNetworks) {
     try {
