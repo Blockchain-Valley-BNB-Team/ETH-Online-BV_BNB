@@ -1,80 +1,143 @@
-import React from "react";
 import Link from "next/link";
-import { hardhat } from "viem/chains";
-import { CurrencyDollarIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { HeartIcon } from "@heroicons/react/24/outline";
-import { SwitchTheme } from "~~/components/SwitchTheme";
-import { BuidlGuidlLogo } from "~~/components/assets/BuidlGuidlLogo";
-import { Faucet } from "~~/components/scaffold-eth";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useGlobalState } from "~~/services/store/store";
+import { Github, MessageSquare, Twitter } from "lucide-react";
 
-/**
- * Site footer
- */
-export const Footer = () => {
-  const nativeCurrencyPrice = useGlobalState(state => state.nativeCurrency.price);
-  const { targetNetwork } = useTargetNetwork();
-  const isLocalNetwork = targetNetwork.id === hardhat.id;
-
+export function Footer() {
   return (
-    <div className="min-h-0 py-5 px-1 mb-11 lg:mb-0">
-      <div>
-        <div className="fixed flex justify-between items-center w-full z-10 p-4 bottom-0 left-0 pointer-events-none">
-          <div className="flex flex-col md:flex-row gap-2 pointer-events-auto">
-            {nativeCurrencyPrice > 0 && (
-              <div>
-                <div className="btn btn-primary btn-sm font-normal gap-1 cursor-auto">
-                  <CurrencyDollarIcon className="h-4 w-4" />
-                  <span>{nativeCurrencyPrice.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-            {isLocalNetwork && (
-              <>
-                <Faucet />
-                <Link href="/blockexplorer" passHref className="btn btn-primary btn-sm font-normal gap-1">
-                  <MagnifyingGlassIcon className="h-4 w-4" />
-                  <span>Block Explorer</span>
-                </Link>
-              </>
-            )}
+    <footer className="border-t border-white/10 bg-card/30 backdrop-blur-sm">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div className="space-y-4">
+            <Link href="/" className="text-2xl font-bold text-accent">
+              Biomni
+            </Link>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Building an open, verifiable future for scientific research on the blockchain.
+            </p>
+            <div className="flex items-center gap-3">
+              <Link
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-muted/50 hover:bg-accent/20 flex items-center justify-center transition-colors"
+              >
+                <Github className="w-4 h-4" />
+              </Link>
+              <Link
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-muted/50 hover:bg-accent/20 flex items-center justify-center transition-colors"
+              >
+                <Twitter className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/discord"
+                className="w-9 h-9 rounded-lg bg-muted/50 hover:bg-accent/20 flex items-center justify-center transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
-          <SwitchTheme className={`pointer-events-auto ${isLocalNetwork ? "self-end md:self-auto" : ""}`} />
+
+          {/* Platform */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm">Platform</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/dashboard" className="text-muted-foreground hover:text-accent transition-colors">
+                  Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link href="/research-pool" className="text-muted-foreground hover:text-accent transition-colors">
+                  Research Pool
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools" className="text-muted-foreground hover:text-accent transition-colors">
+                  Tools
+                </Link>
+              </li>
+              <li>
+                <Link href="/profile" className="text-muted-foreground hover:text-accent transition-colors">
+                  Profile
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm">Resources</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/docs" className="text-muted-foreground hover:text-accent transition-colors">
+                  Documentation
+                </Link>
+              </li>
+              <li>
+                <Link href="/gitbook" className="text-muted-foreground hover:text-accent transition-colors">
+                  GitBook
+                </Link>
+              </li>
+              <li>
+                <Link href="/api" className="text-muted-foreground hover:text-accent transition-colors">
+                  API Reference
+                </Link>
+              </li>
+              <li>
+                <Link href="/tutorials" className="text-muted-foreground hover:text-accent transition-colors">
+                  Tutorials
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Community */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm">Community</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/discord" className="text-muted-foreground hover:text-accent transition-colors">
+                  Discord
+                </Link>
+              </li>
+              <li>
+                <Link href="/forum" className="text-muted-foreground hover:text-accent transition-colors">
+                  Forum
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="text-muted-foreground hover:text-accent transition-colors">
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link href="/grants" className="text-muted-foreground hover:text-accent transition-colors">
+                  Grants Program
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">© 2025 Biomni. All rights reserved.</p>
+          <div className="flex items-center gap-6 text-sm">
+            <Link href="/privacy" className="text-muted-foreground hover:text-accent transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="text-muted-foreground hover:text-accent transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/contact" className="text-muted-foreground hover:text-accent transition-colors">
+              Contact
+            </Link>
+          </div>
         </div>
       </div>
-      <div className="w-full">
-        <ul className="menu menu-horizontal w-full">
-          <div className="flex justify-center items-center gap-2 text-sm w-full">
-            <div className="text-center">
-              <a href="https://github.com/scaffold-eth/se-2" target="_blank" rel="noreferrer" className="link">
-                Fork me
-              </a>
-            </div>
-            <span>·</span>
-            <div className="flex justify-center items-center gap-2">
-              <p className="m-0 text-center">
-                Built with <HeartIcon className="inline-block h-4 w-4" /> at
-              </p>
-              <a
-                className="flex justify-center items-center gap-1"
-                href="https://buidlguidl.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <BuidlGuidlLogo className="w-3 h-5 pb-1" />
-                <span className="link">BuidlGuidl</span>
-              </a>
-            </div>
-            <span>·</span>
-            <div className="text-center">
-              <a href="https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA" target="_blank" rel="noreferrer" className="link">
-                Support
-              </a>
-            </div>
-          </div>
-        </ul>
-      </div>
-    </div>
+    </footer>
   );
-};
+}
