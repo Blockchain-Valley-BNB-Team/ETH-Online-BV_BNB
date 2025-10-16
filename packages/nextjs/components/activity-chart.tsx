@@ -3,14 +3,14 @@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
-const data = [
-  { month: "Jan", research: 186, dao: 80 },
-  { month: "Feb", research: 305, dao: 120 },
-  { month: "Mar", research: 237, dao: 95 },
-  { month: "Apr", research: 273, dao: 140 },
-  { month: "May", research: 409, dao: 180 },
-  { month: "Jun", research: 514, dao: 220 },
-];
+// TODO: 실제 데이터를 props로 받아오기
+interface ActivityChartProps {
+  data?: Array<{
+    month: string;
+    research: number;
+    dao: number;
+  }>;
+}
 
 const chartConfig = {
   research: {
@@ -23,7 +23,16 @@ const chartConfig = {
   },
 };
 
-export function ActivityChart() {
+export function ActivityChart({ data = [] }: ActivityChartProps) {
+  // 데이터가 없을 때 빈 상태 표시
+  if (data.length === 0) {
+    return (
+      <div className="h-[300px] w-full flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">No activity data available</p>
+      </div>
+    );
+  }
+
   return (
     <ChartContainer config={chartConfig} className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
