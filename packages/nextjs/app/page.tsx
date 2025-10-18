@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Navigation } from "@/components/navigation";
 import { NetworkVisualization } from "@/components/network-visualization";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, LayoutDashboard, MessageSquare } from "lucide-react";
+import { BookOpen, FileText, LayoutDashboard } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -43,14 +43,6 @@ export default function LandingPage() {
                   GitBook
                 </Link>
               </Button>
-
-              <Button size="lg" variant="outline" asChild className="border-white/20 hover:bg-white/10 bg-transparent">
-                <Link href="/discord">
-                  <MessageSquare className="mr-2 h-5 w-5" />
-                  Discord
-                </Link>
-              </Button>
-
               <Button size="lg" variant="outline" asChild className="border-white/20 hover:bg-white/10 bg-transparent">
                 <Link href="/docs">
                   <FileText className="mr-2 h-5 w-5" />
