@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { useTheme } from "next-themes";
 import { Toaster } from "react-hot-toast";
-import { foundry } from "viem/chains";
+import { baseSepolia, foundry } from "viem/chains";
 import { useAccount } from "wagmi";
 import { useInitializeNativeCurrencyPrice } from "~~/hooks/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
@@ -71,8 +71,8 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
           theme: mounted ? (isDarkMode ? "dark" : "light") : "light",
           accentColor: "#2299dd",
         },
-        supportedChains: [foundry],
-        defaultChain: foundry,
+        supportedChains: [baseSepolia, foundry],
+        defaultChain: baseSepolia,
         embeddedWallets: {
           ethereum: {
             // 로그인 시 (아직 지갑이 없는) 사용자에게 Privy 내장 지갑 생성 유도
