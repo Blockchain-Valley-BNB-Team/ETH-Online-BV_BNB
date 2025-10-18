@@ -94,7 +94,12 @@ import { Component } from "@/components/Component";   // Next.js style
 
 3. **TypeScript strict mode**:
    - Type annotations recommended, but `any` is allowed (rule off)
-   - Use `// @ts-expect-error` for complex type inference cases
+   - **When to use `any`**:
+     - Temporarily handling complex types from external libraries
+     - Rapid prototyping in early development stages
+     - When type inference is genuinely too complex to resolve
+   - **Prefer `unknown` over `any`** when possible for better type safety
+   - Use `// @ts-expect-error` or `// @ts-ignore` with explanatory comments for edge cases
 
 ---
 
@@ -127,9 +132,12 @@ import { Component } from "@/components/Component";   // Next.js style
 import React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import { Button } from "~~/components/ui/button";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 ```
+
+**Note**: Prefer `~~/` alias for internal imports to maintain consistency with Scaffold-ETH 2 conventions. `@/` alias can also be used but stick to one style within each file.
 
 ---
 
@@ -309,6 +317,85 @@ import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaf
 ---
 
 ## 7. Component Library Usage Rules
+
+### Component Naming and Structure Conventions
+
+#### File Naming
+- **Components**: Use PascalCase for component files (e.g., `MyComponent.tsx`)
+- **Utilities/Hooks**: Use camelCase for non-component files (e.g., `useCustomHook.ts`, `formatAddress.ts`)
+- **Constants**: Use UPPER_SNAKE_CASE for constant files (e.g., `API_ENDPOINTS.ts`)
+
+#### Folder Structure
+```
+components/
+├── scaffold-eth/        # SE-2 base components
+│   ├── Address/
+│   │   ├── Address.tsx
+│   │   ├── AddressCopyIcon.tsx
+│   │   └── index.tsx    # Export barrel
+│   └── Balance.tsx      # Simple component (single file)
+├── ui/                  # shadcn/ui components
+│   ├── button.tsx
+│   ├── card.tsx
+│   └── dialog.tsx
+└── MyFeature/           # Complex feature component
+    ├── MyFeature.tsx
+    ├── MyFeatureItem.tsx
+    ├── useMyFeature.ts
+    └── index.tsx
+```
+
+#### Component Export Patterns
+```typescript
+// ✅ Use barrel exports (index.ts) for complex components
+// components/MyFeature/index.ts
+export { MyFeature } from "./MyFeature";
+export { MyFeatureItem } from "./MyFeatureItem";
+export { useMyFeature } from "./useMyFeature";
+
+// ✅ Import from the directory
+import { MyFeature, useMyFeature } from "~~/components/MyFeature";
+
+// ❌ Don't import from specific files when barrel exists
+import { MyFeature } from "~~/components/MyFeature/MyFeature";
+```
+
+#### Component Structure Order
+```typescript
+"use client";  // 1. Directives (if needed)
+
+// 2. Imports (following Prettier order)
+import React from "react";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+
+// 3. Types/Interfaces
+interface MyComponentProps {
+  title: string;
+}
+
+// 4. Component definition
+export function MyComponent({ title }: MyComponentProps) {
+  // 4a. Hooks
+  const { data } = useScaffoldReadContract({...});
+  
+  // 4b. State
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // 4c. Effects
+  useEffect(() => {...}, []);
+  
+  // 4d. Handlers
+  const handleClick = () => {...};
+  
+  // 4e. Render helpers
+  const renderContent = () => {...};
+  
+  // 4f. Return JSX
+  return <div>...</div>;
+}
+```
+
+---
 
 ### Scaffold-ETH 2 Components (Required)
 
