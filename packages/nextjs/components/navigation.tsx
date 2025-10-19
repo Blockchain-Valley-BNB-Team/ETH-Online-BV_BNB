@@ -2,37 +2,21 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { ChevronDown } from "lucide-react";
-import { Address } from "viem";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 export function Navigation() {
-  const { ready, authenticated, login, logout, user } = usePrivy();
-  const { wallets } = useWallets();
-  const { address: wagmiAddress } = useAccount();
-
-  // 주소 우선순위: Privy 지갑 > wagmi의 외부 지갑
-  const privyAddress = wallets[0]?.address as Address | undefined;
-  const address = privyAddress || wagmiAddress;
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
 
   const renderWalletButton = () => {
-    // Privy가 준비되지 않았을 때
-    if (!ready) {
-      return (
-        <Button variant="outline" size="sm" disabled className="border-accent/50 text-accent/50 bg-transparent">
-          Loading...
-        </Button>
-      );
-    }
-
-    // 로그인되지 않았을 때
-    if (!authenticated || !address) {
+    if (!isConnected || !address) {
       return (
         <Button
           variant="outline"
           size="sm"
-          onClick={login}
+          onClick={() => connect({ connector: connectors[0] })}
           className="border-accent text-accent hover:bg-accent hover:text-background bg-transparent"
         >
           Connect Wallet
@@ -40,7 +24,6 @@ export function Navigation() {
       );
     }
 
-    // 연결되었을 때
     return (
       <div className="relative group">
         <Button
@@ -48,12 +31,7 @@ export function Navigation() {
           size="sm"
           className="border-accent text-accent hover:bg-accent hover:text-background bg-transparent gap-2"
         >
-          <span className="truncate max-w-[120px]">
-            {user?.email?.address ||
-              user?.google?.email ||
-              user?.twitter?.username ||
-              `${address.slice(0, 6)}...${address.slice(-4)}`}
-          </span>
+          <span className="truncate max-w-[120px]">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
           <ChevronDown className="h-3 w-3" />
         </Button>
 
@@ -64,17 +42,11 @@ export function Navigation() {
               <div className="font-bold text-muted-foreground">Address:</div>
               <div className="break-all text-foreground mt-1">{address}</div>
             </div>
-            {user?.email?.address && (
-              <div className="px-3 py-2 text-xs">
-                <div className="font-bold text-muted-foreground">Email:</div>
-                <div className="text-foreground mt-1">{user.email.address}</div>
-              </div>
-            )}
             <div className="border-t border-white/10 pt-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={logout}
+                onClick={() => disconnect()}
                 className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
               >
                 Disconnect
