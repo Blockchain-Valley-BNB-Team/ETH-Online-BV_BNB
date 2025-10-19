@@ -356,7 +356,7 @@ export { useMyFeature } from "./useMyFeature";
 // ✅ Import from the directory
 import { MyFeature, useMyFeature } from "~~/components/MyFeature";
 
-// ❌ Don't import from specific files when barrel exists
+// ❌ Do not import from specific files when barrel exists
 import { MyFeature } from "~~/components/MyFeature/MyFeature";
 ```
 
