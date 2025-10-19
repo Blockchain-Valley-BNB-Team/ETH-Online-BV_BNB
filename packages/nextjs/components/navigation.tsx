@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NetworkSwitcher } from "@/components/scaffold-eth/NetworkSwitcher";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
@@ -60,34 +61,40 @@ export function Navigation() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-lg">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold text-accent">
-          Biomni
-        </Link>
+      <div className="container mx-auto px-4 h-16">
+        {/* 3개 컬럼 그리드 레이아웃: 왼쪽(로고), 중앙(메뉴), 오른쪽(버튼들) */}
+        <div className="grid grid-cols-3 items-center h-full">
+          {/* 왼쪽: 로고 */}
+          <div className="flex justify-start">
+            <Link href="/" className="text-2xl font-bold text-accent">
+              Biomni
+            </Link>
+          </div>
 
-        <div className="hidden md:flex items-center gap-8">
-          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          <Link href="/research-pool" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Research Pool
-          </Link>
-          <Link href="/tools" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Tools
-          </Link>
-          <Link href="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Profile
-          </Link>
-          <Link href="/debug" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Debug
-          </Link>
-        </div>
+          {/* 중앙: 네비게이션 메뉴 */}
+          <div className="hidden md:flex items-center justify-center gap-8">
+            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Dashboard
+            </Link>
+            <Link
+              href="/research-pool"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Research Pool
+            </Link>
+            <Link href="/tools" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Tools
+            </Link>
+            <Link href="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Profile
+            </Link>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/docs">Docs</Link>
-          </Button>
-          {renderWalletButton()}
+          {/* 오른쪽: 네트워크 스위처 + 지갑 버튼 */}
+          <div className="flex items-center justify-end gap-3">
+            <NetworkSwitcher />
+            {renderWalletButton()}
+          </div>
         </div>
       </div>
     </nav>
