@@ -7,7 +7,7 @@ import { Navigation } from "@/components/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, ExternalLink, FileText, Users } from "lucide-react";
+import { Award, Calendar, Clock, ExternalLink, FileText, TrendingUp, Users } from "lucide-react";
 
 const researchProjects = [
   {
@@ -132,12 +132,51 @@ export default function ResearchPoolPage() {
       <main className="container mx-auto px-4 pt-24 pb-16">
         <div className="space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold">Research Pool</h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
-              Discover and collaborate on cutting-edge diabetes research from decentralized autonomous organizations
-              worldwide
-            </p>
+          <div className="text-center space-y-6">
+            <div className="space-y-4">
+              <h1 className="text-4xl font-bold">Research Pool</h1>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
+                Discover and collaborate on cutting-edge diabetes research from decentralized autonomous organizations
+                worldwide
+              </p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              <Card className="bg-card/50 border-white/10 backdrop-blur-sm hover:border-accent/30 transition-all duration-300">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <TrendingUp className="w-6 h-6 text-accent" />
+                    <span className="text-4xl font-bold text-accent">{researchProjects.length}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total Projects</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 border-white/10 backdrop-blur-sm hover:border-green-400/30 transition-all duration-300">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <Clock className="w-6 h-6 text-green-500" />
+                    <span className="text-4xl font-bold text-green-500">
+                      {researchProjects.filter(p => p.status === "Active").length}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Active Projects</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/50 border-white/10 backdrop-blur-sm hover:border-blue-400/30 transition-all duration-300">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <Award className="w-6 h-6 text-blue-500" />
+                    <span className="text-4xl font-bold text-blue-500">
+                      {researchProjects.filter(p => p.status === "Upcoming").length}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Upcoming Projects</p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 justify-center">
@@ -171,10 +210,14 @@ export default function ResearchPoolPage() {
 
           {/* Research Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleProjects.map(project => (
+            {visibleProjects.map((project, index) => (
               <Card
                 key={project.id}
-                className="group border-white/10 bg-card/50 backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 hover:bg-card/80 h-full flex flex-col"
+                className="group border-white/10 bg-card/50 backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 hover:bg-card/80 h-full flex flex-col animate-fade-in-up"
+                style={{
+                  animationDelay: `${index * 100}ms`,
+                  animationFillMode: "both",
+                }}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 mb-2">
