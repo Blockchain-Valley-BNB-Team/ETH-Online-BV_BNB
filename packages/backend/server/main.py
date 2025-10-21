@@ -21,7 +21,7 @@ from agent_service import BiomniAgentService
 from blockchain_service import BlockchainService
 
 # 환경 변수 로드
-load_dotenv()
+load_dotenv(override=True)
 
 # FastAPI 앱 생성
 app = FastAPI(

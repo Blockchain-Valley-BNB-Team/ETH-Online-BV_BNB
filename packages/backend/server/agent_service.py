@@ -37,7 +37,7 @@ class BiomniAgentService:
             raise Exception("Biomni is not installed")
         
         if self.agent is None:
-            llm = config.llm if config else "gemini-2.5-flash-lite"
+            llm = config.llm if config else "gpt-5-nano"
             data_path = "./data"
             use_tool_retriever = config.use_tool_retriever if config and hasattr(config, 'use_tool_retriever') else True
             timeout_seconds = config.timeout_seconds if config and hasattr(config, 'timeout_seconds') else 1200
@@ -50,7 +50,7 @@ class BiomniAgentService:
             # IMPORTANT: Configure default_config for ALL operations (agent + database queries)
             # According to Biomni docs, direct A1() params only affect agent reasoning
             default_config.llm = llm
-            default_config.source = "Gemini"
+            default_config.source = "OpenAI"
             default_config.timeout_seconds = timeout_seconds
             default_config.use_tool_retriever = use_tool_retriever
             default_config.path = data_path

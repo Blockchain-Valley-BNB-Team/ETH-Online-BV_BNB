@@ -47,7 +47,7 @@ def get_llm(
 
     # Use defaults if still not specified
     if model is None:
-        model = "gemini-2.5-flash-lite"
+        model = "gpt-5-nano"
     if temperature is None:
         temperature = 0.7
     if api_key is None:
@@ -102,7 +102,9 @@ def get_llm(
             raise ImportError(  # noqa: B904
                 "langchain-openai package is required for OpenAI models. Install with: pip install langchain-openai"
             )
-        return ChatOpenAI(model=model, temperature=temperature, stop_sequences=stop_sequences)
+        # Prefer explicit api_key (including from config), then OPENAI_API_KEY
+        openai_key = api_key if (api_key is not None and api_key != "EMPTY") else os.getenv("OPENAI_API_KEY")
+        return ChatOpenAI(model=model, temperature=temperature, stop_sequences=stop_sequences, api_key=openai_key)
 
     elif source == "AzureOpenAI":
         try:

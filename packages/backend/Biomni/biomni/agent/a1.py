@@ -43,8 +43,8 @@ from biomni.utils import (
 )
 
 if os.path.exists(".env"):
-    load_dotenv(".env", override=False)
-    print("Loaded environment variables from .env")
+    load_dotenv(".env", override=True)
+    print("Loaded environment variables from .env (override enabled)")
 
 
 class AgentState(TypedDict):
