@@ -47,3 +47,7 @@ ipfs-upload.config.json
 # Express logs (optional)
 packages/express/*.log
 packages/express/package-lock.json
+
+# Next.js cache
+.next/cache/
+.next/static/

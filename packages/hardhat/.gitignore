@@ -28,3 +28,16 @@ deployments/localhost
 
 # other
 temp
+
+
+.venv/
+ignition/deployments/*
+!ignition/deployments/localhost
+
+.env.local
+.env.*.local
+*.env
+deployments/
+!deployments/localhost
+ignition/deployments/*
+!ignition/deployments/localhost

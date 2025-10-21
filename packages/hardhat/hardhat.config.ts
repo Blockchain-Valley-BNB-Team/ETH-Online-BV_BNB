@@ -5,6 +5,7 @@ import hardhatMocha from "@nomicfoundation/hardhat-mocha";
 import hardhatEthersChai from "@nomicfoundation/hardhat-ethers-chai-matchers";
 import hardhatTypechain from "@nomicfoundation/hardhat-typechain";
 import hardhatVerify from "@nomicfoundation/hardhat-verify";
+import hardhatIgnition from "@nomicfoundation/hardhat-ignition-ethers";
 
 // Alchemy API key 설정
 // https://dashboard.alchemyapi.io 에서 자체 API 키를 얻을 수 있습니다
@@ -17,7 +18,7 @@ const deployerPrivateKey =
 
 const config: HardhatUserConfig = {
   // Hardhat 3: 플러그인을 명시적으로 등록
-  plugins: [hardhatEthers, hardhatMocha, hardhatEthersChai, hardhatTypechain, hardhatVerify],
+  plugins: [hardhatEthers, hardhatMocha, hardhatEthersChai, hardhatTypechain, hardhatVerify, hardhatIgnition],
 
   // Solidity 컴파일러 설정
   solidity: {

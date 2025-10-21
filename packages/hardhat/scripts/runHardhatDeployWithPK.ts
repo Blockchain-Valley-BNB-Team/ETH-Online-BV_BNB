@@ -14,12 +14,16 @@ async function main() {
   const networkName = networkIndex !== -1 ? process.argv[networkIndex + 1] : config.defaultNetwork;
 
   if (networkName === "localhost" || networkName === "hardhat") {
-    // Deploy command on the localhost network
-    const hardhat = spawn("hardhat", ["deploy", ...process.argv.slice(2)], {
-      stdio: "inherit",
-      env: process.env,
-      shell: process.platform === "win32",
-    });
+    // Deploy command on the localhost network using Ignition
+    const hardhat = spawn(
+      "hardhat",
+      ["ignition", "deploy", "ignition/modules/ResearchRegistry.ts", ...process.argv.slice(2)],
+      {
+        stdio: "inherit",
+        env: process.env,
+        shell: process.platform === "win32",
+      },
+    );
 
     hardhat.on("exit", code => {
       process.exit(code || 0);
@@ -40,11 +44,15 @@ async function main() {
     const wallet = await Wallet.fromEncryptedJson(encryptedKey, pass);
     process.env.__RUNTIME_DEPLOYER_PRIVATE_KEY = wallet.privateKey;
 
-    const hardhat = spawn("hardhat", ["deploy", ...process.argv.slice(2)], {
-      stdio: "inherit",
-      env: process.env,
-      shell: process.platform === "win32",
-    });
+    const hardhat = spawn(
+      "hardhat",
+      ["ignition", "deploy", "ignition/modules/ResearchRegistry.ts", ...process.argv.slice(2)],
+      {
+        stdio: "inherit",
+        env: process.env,
+        shell: process.platform === "win32",
+      },
+    );
 
     hardhat.on("exit", code => {
       process.exit(code || 0);

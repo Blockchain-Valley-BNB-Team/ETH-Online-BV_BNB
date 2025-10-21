@@ -23,3 +23,41 @@ node_modules
 dist
 
 packages/nextjs/app/debug/*
+packages/hardhat/.venv/
+
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Python virtual environments
+.venv/
+venv/
+env/
+.env/
+
+*.pkl                    # Python pickle 파일들 (Biomni 데이터)
+*.zip                    # 압축 파일들
+*.tar.gz                 # 압축 파일들
+*.csv                    # 데이터 파일들 (개발용)
+*.xlsx                   # Excel 파일들
+*.jsonl                  # JSON Lines 파일들
+*.tmp                    # 임시 파일들
+*.temp                   # 임시 파일들
+temp/                    # 임시 디렉토리
+tmp/                     # 임시 디렉토리
+cache/                   # 캐시 디렉토리
+.cache/     
+
+packages/backend/Biomni/data/
+packages/backend/Biomni/biomni_env/biomni_tools/
+packages/backend/Biomni/biomni/tool/schema_db/*.pkl
+packages/backend/Biomni/scripts/outputs/
+packages/backend/Biomni/scripts/wandb/

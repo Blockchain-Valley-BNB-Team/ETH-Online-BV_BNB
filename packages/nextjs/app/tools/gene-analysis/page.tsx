@@ -1,110 +1,243 @@
 "use client";
 
-import type React from "react";
-import { useRef, useState } from "react";
-import { Footer } from "@/components/Footer";
-import { DnaVisualization } from "@/components/dna-visualization";
-import { Navigation } from "@/components/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, FileCheck, Loader2, Upload, X } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { AlertCircle, Bot, ChevronDown, ChevronUp, Database, ExternalLink, Loader2, Send, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
+import { useAccount } from "wagmi";
+import { Footer } from "~~/components/Footer";
+import { Navigation } from "~~/components/navigation";
+import { Address } from "~~/components/scaffold-eth";
+import { Badge } from "~~/components/ui/badge";
+import { Button } from "~~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~~/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~~/components/ui/collapsible";
+import { ScrollArea } from "~~/components/ui/scroll-area";
+import { Textarea } from "~~/components/ui/textarea";
+
+interface Message {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: Date;
+  type?: "log" | "result" | "blockchain" | "error";
+  blockchainData?: {
+    transaction_hash: string;
+    research_id: number;
+    gas_used: number;
+    block_number: number;
+  };
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export default function GeneAnalysisPage() {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [fileName, setFileName] = useState<string>("");
-  const [fileSize, setFileSize] = useState<number>(0);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [error, setError] = useState<string>("");
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { address, isConnected } = useAccount();
+  const [sessionId, setSessionId] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [sessionError, setSessionError] = useState<string>("");
+  const [expandedLogs, setExpandedLogs] = useState<{ [key: number]: boolean }>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const supportedFormats = [".fasta", ".fastq", ".vcf", ".csv"];
-  const maxFileSize = 100 * 1024 * 1024; // 100MB
+  // 세션 생성
+  const createSession = useCallback(async () => {
+    if (isConnecting) return; // 이미 연결 중이면 중복 실행 방지
 
-  const validateFile = (file: File): string | null => {
-    const extension = "." + file.name.split(".").pop()?.toLowerCase();
+    setIsConnecting(true);
+    setSessionError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-    if (!supportedFormats.includes(extension)) {
-      return `Unsupported file format. Please upload: ${supportedFormats.join(", ")}`;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create session: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      setSessionId(data.session_id);
+      setSessionError("");
+      toast.success("세션이 생성되었습니다");
+    } catch (error) {
+      console.error("Session creation error:", error);
+
+      let errorMessage = "";
+      // 백엔드 서버 연결 실패 감지
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        errorMessage = "백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.";
+        toast.error(errorMessage);
+      } else {
+        errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
+        toast.error(`세션 생성에 실패했습니다: ${errorMessage}`);
+      }
+
+      setSessionError(errorMessage);
+    } finally {
+      setIsConnecting(false);
     }
+  }, [isConnecting]);
 
-    if (file.size > maxFileSize) {
-      return `File size too large. Maximum size is ${maxFileSize / (1024 * 1024)}MB`;
+  // 페이지 로드 시 세션 생성
+  useEffect(() => {
+    if (isConnected && !sessionId) {
+      createSession();
     }
+  }, [isConnected, sessionId, createSession]);
 
-    return null;
-  };
-
-  const handleFileUpload = (file: File) => {
-    setError("");
-
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
+  // 메시지 전송
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !sessionId || !address) {
       return;
     }
 
-    setFileName(file.name);
-    setFileSize(file.size);
-    setStep(2);
-    setIsProcessing(true);
-    setUploadProgress(0);
+    const userMessage: Message = {
+      role: "user",
+      content: inputMessage,
+      timestamp: new Date(),
+    };
 
-    // Simulate upload progress
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          setIsProcessing(false);
-          setStep(3);
-          return 100;
-        }
-        return prev + 10;
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          message: inputMessage,
+          user_address: address,
+        }),
       });
-    }, 300);
-  };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileUpload(file);
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("No reader available");
+      }
+
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        // Support both \n\n and \r\n\r\n separators
+        const segments = buffer.split(/\r?\n\r?\n/);
+        buffer = segments.pop() || "";
+
+        for (const segment of segments) {
+          const line = segment.trim();
+          if (!line) continue;
+
+          // Extract event and data fields in a tolerant way
+          const eventMatch = line.match(/^event:\s*(.+)$/m);
+          const dataMatch = line.match(/^data:\s*(.+)$/m);
+
+          if (eventMatch && dataMatch) {
+            const eventType = eventMatch[1].trim();
+            let parsed: any = null;
+            try {
+              parsed = JSON.parse(dataMatch[1]);
+            } catch {
+              console.warn("[SSE] Failed to parse data JSON:", dataMatch[1]);
+              continue;
+            }
+
+            console.log(`[SSE] Event received: ${eventType}`, parsed);
+
+            if (eventType === "message") {
+              const assistantMessage: Message = {
+                role: "assistant",
+                content: parsed.content,
+                timestamp: new Date(parsed.timestamp),
+                type: parsed.type,
+              };
+              console.log(`[SSE] Adding message - type: ${parsed.type}, content length: ${parsed.content?.length}`);
+              setMessages(prev => [...prev, assistantMessage]);
+            } else if (eventType === "thinking" || eventType === "plan") {
+              const assistantMessage: Message = {
+                role: "assistant",
+                content: parsed.content,
+                timestamp: new Date(parsed.timestamp),
+                type: eventType as any,
+              };
+              setMessages(prev => [...prev, assistantMessage]);
+              // } else if (eventType === "storing") {
+              //   const systemMessage: Message = {
+              //     role: "system",
+              //     content: "블록체인에 연구 결과를 저장하는 중...",
+              //     timestamp: new Date(),
+              //   };
+              //   setMessages(prev => [...prev, systemMessage]);
+            } else if (eventType === "blockchain") {
+              const blockchainMessage: Message = {
+                role: "system",
+                content: "블록체인에 연구 결과가 저장되었습니다",
+                timestamp: new Date(),
+                type: "blockchain",
+                blockchainData: parsed,
+              };
+              setMessages(prev => [...prev, blockchainMessage]);
+              toast.success("연구 결과가 블록체인에 저장되었습니다");
+            } else if (eventType === "done") {
+              setIsLoading(false);
+            } else if (eventType === "error" || eventType === "blockchain_error") {
+              const errorMessage: Message = {
+                role: "system",
+                content: parsed.error || "오류가 발생했습니다",
+                timestamp: new Date(),
+                type: "error",
+              };
+              setMessages(prev => [...prev, errorMessage]);
+              toast.error(parsed.error || "오류가 발생했습니다");
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Send message error:", error);
+      toast.error("메시지 전송에 실패했습니다");
+      const errorMessage: Message = {
+        role: "system",
+        content: "메시지 전송 중 오류가 발생했습니다",
+        timestamp: new Date(),
+        type: "error",
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileUpload(file);
+  // 자동 스크롤
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, [messages]);
 
-  const handleSelectFile = () => {
-    fileInputRef.current?.click();
-  };
-
-  const resetUpload = () => {
-    setStep(1);
-    setFileName("");
-    setFileSize(0);
-    setUploadProgress(0);
-    setError("");
-    setIsProcessing(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  // 엔터키로 전송
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -113,247 +246,236 @@ export default function GeneAnalysisPage() {
       <Navigation />
 
       <main className="container mx-auto px-4 pt-24 pb-16">
-        <div className="max-w-5xl mx-auto space-y-8">
+        <div className="max-w-5xl mx-auto space-y-6">
           {/* Header */}
           <div className="space-y-2 text-center">
-            <h1 className="text-4xl font-bold">Gene Analysis Tool</h1>
-            <p className="text-muted-foreground text-lg">AI-powered genomic data analysis and visualization</p>
+            <h1 className="text-4xl font-bold">Gene Analysis AI Agent</h1>
+            <p className="text-muted-foreground text-lg">Biomni AI 기반 유전자 분석 채팅 인터페이스</p>
           </div>
 
-          {/* Process Steps */}
-          <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  step >= 1 ? "bg-accent text-background" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                1
-              </div>
-              <span className={`text-sm font-medium ${step >= 1 ? "text-foreground" : "text-muted-foreground"}`}>
-                Upload Data
-              </span>
-            </div>
-
-            <div className={`w-12 h-0.5 ${step >= 2 ? "bg-accent" : "bg-muted"}`} />
-
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  step >= 2 ? "bg-accent text-background" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                2
-              </div>
-              <span className={`text-sm font-medium ${step >= 2 ? "text-foreground" : "text-muted-foreground"}`}>
-                AI Processing
-              </span>
-            </div>
-
-            <div className={`w-12 h-0.5 ${step >= 3 ? "bg-accent" : "bg-muted"}`} />
-
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  step >= 3 ? "bg-accent text-background" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                3
-              </div>
-              <span className={`text-sm font-medium ${step >= 3 ? "text-foreground" : "text-muted-foreground"}`}>
-                View Result
-              </span>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <Card className="border-white/10 bg-card">
-            <CardContent className="p-8">
-              {step === 1 && (
-                <div className="space-y-6">
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-12 text-center transition-all duration-200 ${
-                      isDragOver
-                        ? "border-accent bg-accent/10"
-                        : error
-                          ? "border-red-500 bg-red-500/10"
-                          : "border-muted hover:border-accent/50"
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                  >
-                    <Upload
-                      className={`w-12 h-12 mx-auto mb-4 ${isDragOver ? "text-accent" : "text-muted-foreground"}`}
-                    />
-                    <h3 className="text-lg font-semibold mb-2">Upload Gene Data</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Drag and drop your file here, or click to select
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Supports FASTA, FASTQ, VCF, and CSV formats (Max 100MB)
-                    </p>
-
-                    {error && (
-                      <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <AlertCircle className="w-4 h-4 text-red-500" />
-                        <span className="text-sm text-red-500">{error}</span>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handleSelectFile}
-                      className="bg-[oklch(0.65_0.18_60)] text-background hover:bg-[oklch(0.6_0.18_60)]"
-                    >
-                      Select File
-                    </Button>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept=".fasta,.fastq,.vcf,.csv"
-                      onChange={handleFileInputChange}
-                    />
-                  </div>
+          {/* Wallet Info */}
+          {isConnected && address && (
+            <Card className="border-accent/20 bg-accent/5">
+              <CardContent className="py-3 px-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium">연결된 지갑:</span>
+                  <Address address={address} />
                 </div>
-              )}
+                {sessionId && (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    세션: {sessionId.slice(0, 8)}...
+                  </Badge>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-              {step === 2 && (
-                <div className="space-y-6">
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <DnaVisualization />
-                    <div className="mt-8 text-center max-w-md">
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-8 h-8 mx-auto mb-4 text-accent animate-spin" />
-                          <h3 className="text-lg font-semibold mb-2">Processing {fileName}</h3>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            AI is analyzing your genomic data... This may take a few moments.
+          {/* Chat Interface */}
+          <Card className="border-white/10 bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-5 w-5 text-accent" />
+                채팅
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!isConnected ? (
+                <div className="p-12 text-center">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">지갑을 연결해주세요</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Gene Analysis AI Agent를 사용하려면 먼저 지갑을 연결해야 합니다.
+                  </p>
+                </div>
+              ) : isConnecting ? (
+                <div className="p-12 text-center">
+                  <Loader2 className="h-12 w-12 mx-auto mb-4 text-accent animate-spin" />
+                  <h3 className="text-lg font-semibold mb-2">세션 생성 중...</h3>
+                  <p className="text-sm text-muted-foreground">잠시만 기다려주세요.</p>
+                </div>
+              ) : sessionError ? (
+                <div className="p-12 text-center">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+                  <h3 className="text-lg font-semibold mb-2">세션 생성 실패</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{sessionError}</p>
+                  <Button onClick={createSession} variant="outline">
+                    다시 시도
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Messages */}
+                  <ScrollArea className="h-[500px] px-4">
+                    <div className="space-y-4 py-4">
+                      {messages.length === 0 && (
+                        <div className="text-center py-12">
+                          <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                          <p className="text-muted-foreground">
+                            유전자 분석에 대해 질문해보세요.
+                            <br />
+                            예: &quot;BRCA1 유전자의 기능을 설명해주세요&quot;
                           </p>
-
-                          {/* Progress Bar */}
-                          <div className="w-full bg-muted rounded-full h-2 mb-2">
-                            <div
-                              className="bg-accent h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${uploadProgress}%` }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">{uploadProgress}% complete</p>
-
-                          {/* File Info */}
-                          <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                            <p className="text-xs text-muted-foreground">File: {fileName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Size: {(fileSize / (1024 * 1024)).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <FileCheck className="w-8 h-8 mx-auto mb-4 text-accent" />
-                          <h3 className="text-lg font-semibold mb-2">Analysis Complete</h3>
-                          <p className="text-sm text-muted-foreground">Your results are ready to view</p>
-                        </>
+                        </div>
                       )}
+
+                      {messages.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        >
+                          {message.role === "assistant" && (
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                              <Bot className="h-4 w-4 text-accent" />
+                            </div>
+                          )}
+
+                          <div
+                            className={`max-w-[80%] rounded-lg ${
+                              message.role === "user"
+                                ? "bg-accent text-background p-3"
+                                : message.type === "error"
+                                  ? "bg-destructive/20 border border-destructive/50 p-3"
+                                  : message.type === "blockchain"
+                                    ? "bg-accent/10 border border-accent/50 p-4"
+                                    : message.type === "result"
+                                      ? "bg-primary/10 border border-primary/30 p-4"
+                                      : message.type === "log"
+                                        ? "bg-muted/50 border border-muted"
+                                        : "bg-muted p-3"
+                            }`}
+                          >
+                            {message.type === "blockchain" && message.blockchainData ? (
+                              <div className="space-y-3">
+                                <p className="font-semibold text-base flex items-center gap-2 text-accent">
+                                  <Database className="h-5 w-5" />
+                                  블록체인 저장 완료
+                                </p>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-muted-foreground font-medium">트랜잭션 해시</span>
+                                    <div className="flex items-center gap-2 bg-background/50 p-2 rounded font-mono text-xs">
+                                      <code className="break-all">{message.blockchainData.transaction_hash}</code>
+                                      <a
+                                        href={`https://sepolia.basescan.org/tx/${message.blockchainData.transaction_hash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-accent hover:underline inline-flex items-center gap-1 shrink-0"
+                                      >
+                                        <ExternalLink className="h-3 w-3" />
+                                        탐색기
+                                      </a>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-background/50 p-2 rounded">
+                                      <span className="text-muted-foreground text-xs">연구 ID</span>
+                                      <p className="font-mono font-medium">#{message.blockchainData.research_id}</p>
+                                    </div>
+                                    <div className="bg-background/50 p-2 rounded">
+                                      <span className="text-muted-foreground text-xs">블록 번호</span>
+                                      <p className="font-mono font-medium">{message.blockchainData.block_number}</p>
+                                    </div>
+                                  </div>
+                                  <div className="bg-background/50 p-2 rounded">
+                                    <span className="text-muted-foreground text-xs">가스 사용량</span>
+                                    <p className="font-mono font-medium">
+                                      {message.blockchainData.gas_used.toLocaleString()} gas
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : message.type === "result" ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Bot className="h-5 w-5 text-primary" />
+                                  <span className="font-semibold text-base text-primary">최종 분석 결과</span>
+                                </div>
+                                <div className="prose prose-sm max-w-none">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-3">
+                                  {message.timestamp.toLocaleTimeString("ko-KR")}
+                                </p>
+                              </div>
+                            ) : message.type === "log" ? (
+                              <Collapsible
+                                open={expandedLogs[index]}
+                                onOpenChange={open => setExpandedLogs(prev => ({ ...prev, [index]: open }))}
+                              >
+                                <div className="p-2">
+                                  <CollapsibleTrigger className="flex items-center justify-between w-full hover:bg-muted/50 p-2 rounded transition-colors">
+                                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                                      <Bot className="h-3 w-3" />
+                                      추론 과정 #{index + 1}
+                                    </span>
+                                    {expandedLogs[index] ? (
+                                      <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                    )}
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="mt-2">
+                                    <div className="bg-background/50 p-3 rounded text-xs font-mono">
+                                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                    </div>
+                                  </CollapsibleContent>
+                                </div>
+                              </Collapsible>
+                            ) : (
+                              <>
+                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {message.timestamp.toLocaleTimeString("ko-KR")}
+                                </p>
+                              </>
+                            )}
+                          </div>
+
+                          {message.role === "user" && (
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                              <User className="h-4 w-4 text-background" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {isLoading && (
+                        <div className="flex gap-3 justify-start">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                            <Bot className="h-4 w-4 text-accent" />
+                          </div>
+                          <div className="bg-muted rounded-lg p-3">
+                            <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                          </div>
+                        </div>
+                      )}
+
+                      <div ref={scrollRef} />
+                    </div>
+                  </ScrollArea>
+
+                  {/* Input */}
+                  <div className="border-t border-white/10 p-4">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={inputMessage}
+                        onChange={e => setInputMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="유전자 분석에 대해 질문하세요... (Shift+Enter로 줄바꿈)"
+                        className="min-h-[60px] resize-none"
+                        disabled={isLoading}
+                      />
+                      <Button
+                        onClick={sendMessage}
+                        disabled={isLoading || !inputMessage.trim()}
+                        className="bg-accent text-background hover:bg-accent/90 px-6"
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {step === 3 && (
-                <div className="space-y-6">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <Card className="border-accent/20 bg-accent/5">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Genes Analyzed</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-accent">23,847</div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-accent/20 bg-accent/5">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Variants Found</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-accent">1,342</div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-accent/20 bg-accent/5">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Confidence Score</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-accent">98.7%</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card className="border-white/10">
-                    <CardHeader>
-                      <CardTitle>Key Findings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {[
-                          {
-                            gene: "BRCA1",
-                            variant: "c.5266dupC",
-                            significance: "Pathogenic",
-                            color: "text-red-400",
-                          },
-                          {
-                            gene: "TP53",
-                            variant: "c.215C>G",
-                            significance: "Likely Pathogenic",
-                            color: "text-orange-400",
-                          },
-                          {
-                            gene: "APOE",
-                            variant: "ε3/ε4",
-                            significance: "Risk Factor",
-                            color: "text-yellow-400",
-                          },
-                          {
-                            gene: "MTHFR",
-                            variant: "c.677C>T",
-                            significance: "Benign",
-                            color: "text-accent",
-                          },
-                        ].map((finding, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-white/5"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full bg-accent" />
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {finding.gene} - {finding.variant}
-                                </p>
-                                <p className={`text-xs ${finding.color} font-medium mt-0.5`}>{finding.significance}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div className="flex gap-3">
-                    <Button variant="outline" onClick={resetUpload} className="gap-2">
-                      <X className="w-4 h-4" />
-                      Analyze New Sample
-                    </Button>
-                    <Button className="bg-accent text-background hover:bg-accent/90 gap-2">
-                      <FileCheck className="w-4 h-4" />
-                      Download Report
-                    </Button>
-                  </div>
-                </div>
+                </>
               )}
             </CardContent>
           </Card>
