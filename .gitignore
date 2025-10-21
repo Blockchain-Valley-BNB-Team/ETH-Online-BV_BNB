@@ -23,6 +23,7 @@ node_modules
 dist
 
 packages/nextjs/app/debug/*
+packages/hardhat/.venv/
 
 .env
 .env.local
@@ -35,4 +36,10 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Python virtual environments
+.venv/
+venv/
+env/
+.env/
 
