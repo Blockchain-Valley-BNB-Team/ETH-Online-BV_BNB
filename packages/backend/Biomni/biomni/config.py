@@ -33,7 +33,7 @@ class BiomniConfig:
     timeout_seconds: int = 600
 
     # LLM settings (API keys still from environment)
-    llm: str = "gpt-5-nano"
+    llm: str = "gpt-5-mini"
     temperature: float = 0.7
 
     # Tool settings

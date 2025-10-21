@@ -36,3 +36,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 ipfs-upload.config.json
+
+*.tsbuildinfo
+ipfs-upload.config.json
+.next/cache/
+.next/static/

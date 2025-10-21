@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import json
 import os
 from datetime import datetime
+from pathlib import Path
 
 from models import (
     ChatRequest,
@@ -20,8 +21,27 @@ from models import (
 from agent_service import BiomniAgentService
 from blockchain_service import BlockchainService
 
-# 환경 변수 로드
-load_dotenv(override=True)
+# 환경 변수 로드 (.env 파일을 여러 위치에서 탐색)
+base_dir = Path(__file__).resolve().parent
+env_candidates = [
+    base_dir / ".env",
+    base_dir.parent / ".env",
+    Path(os.getcwd()) / ".env",
+]
+
+loaded_any_env = False
+seen_paths: set[Path] = set()
+for env_path in env_candidates:
+    resolved_path = env_path.resolve()
+    if resolved_path in seen_paths:
+        continue
+    if resolved_path.exists():
+        load_dotenv(resolved_path, override=True)
+        seen_paths.add(resolved_path)
+        loaded_any_env = True
+
+if not loaded_any_env:
+    load_dotenv(override=True)
 
 # FastAPI 앱 생성
 app = FastAPI(
@@ -129,10 +149,15 @@ async def send_message(request: ChatRequest):
                 
                 print(f"Blockchain storage successful - TX: {blockchain_result['transaction_hash']}")
                 
-                # 블록체인 결과 전송
+                # 블록체인 결과 전송: 해시만 필수 전달
                 yield {
                     "event": "blockchain",
-                    "data": json.dumps(blockchain_result)
+                    "data": json.dumps({
+                        "transaction_hash": blockchain_result.get("transaction_hash"),
+                        "research_id": blockchain_result.get("research_id"),
+                        "block_number": blockchain_result.get("block_number"),
+                        "gas_used": blockchain_result.get("gas_used"),
+                    })
                 }
                 
             except Exception as e:

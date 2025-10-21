@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, Bot, Database, ExternalLink, Loader2, Send, User } from "lucide-react";
+import { AlertCircle, Bot, ChevronDown, ChevronUp, Database, ExternalLink, Loader2, Send, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useAccount } from "wagmi";
 import { Footer } from "~~/components/Footer";
@@ -10,6 +12,7 @@ import { Address } from "~~/components/scaffold-eth";
 import { Badge } from "~~/components/ui/badge";
 import { Button } from "~~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~~/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~~/components/ui/collapsible";
 import { ScrollArea } from "~~/components/ui/scroll-area";
 import { Textarea } from "~~/components/ui/textarea";
 
@@ -36,6 +39,7 @@ export default function GeneAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [sessionError, setSessionError] = useState<string>("");
+  const [expandedLogs, setExpandedLogs] = useState<{ [key: number]: boolean }>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 세션 생성
@@ -134,41 +138,61 @@ export default function GeneAnalysisPage() {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
+        // Support both \n\n and \r\n\r\n separators
+        const segments = buffer.split(/\r?\n\r?\n/);
+        buffer = segments.pop() || "";
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
+        for (const segment of segments) {
+          const line = segment.trim();
+          if (!line) continue;
 
-          const eventMatch = line.match(/^event: (.+)$/m);
-          const dataMatch = line.match(/^data: (.+)$/m);
+          // Extract event and data fields in a tolerant way
+          const eventMatch = line.match(/^event:\s*(.+)$/m);
+          const dataMatch = line.match(/^data:\s*(.+)$/m);
 
           if (eventMatch && dataMatch) {
-            const eventType = eventMatch[1];
-            const data = JSON.parse(dataMatch[1]);
+            const eventType = eventMatch[1].trim();
+            let parsed: any = null;
+            try {
+              parsed = JSON.parse(dataMatch[1]);
+            } catch {
+              console.warn("[SSE] Failed to parse data JSON:", dataMatch[1]);
+              continue;
+            }
+
+            console.log(`[SSE] Event received: ${eventType}`, parsed);
 
             if (eventType === "message") {
               const assistantMessage: Message = {
                 role: "assistant",
-                content: data.content,
-                timestamp: new Date(data.timestamp),
-                type: data.type,
+                content: parsed.content,
+                timestamp: new Date(parsed.timestamp),
+                type: parsed.type,
+              };
+              console.log(`[SSE] Adding message - type: ${parsed.type}, content length: ${parsed.content?.length}`);
+              setMessages(prev => [...prev, assistantMessage]);
+            } else if (eventType === "thinking" || eventType === "plan") {
+              const assistantMessage: Message = {
+                role: "assistant",
+                content: parsed.content,
+                timestamp: new Date(parsed.timestamp),
+                type: eventType as any,
               };
               setMessages(prev => [...prev, assistantMessage]);
-            } else if (eventType === "storing") {
-              const systemMessage: Message = {
-                role: "system",
-                content: "블록체인에 연구 결과를 저장하는 중...",
-                timestamp: new Date(),
-              };
-              setMessages(prev => [...prev, systemMessage]);
+              // } else if (eventType === "storing") {
+              //   const systemMessage: Message = {
+              //     role: "system",
+              //     content: "블록체인에 연구 결과를 저장하는 중...",
+              //     timestamp: new Date(),
+              //   };
+              //   setMessages(prev => [...prev, systemMessage]);
             } else if (eventType === "blockchain") {
               const blockchainMessage: Message = {
                 role: "system",
                 content: "블록체인에 연구 결과가 저장되었습니다",
                 timestamp: new Date(),
                 type: "blockchain",
-                blockchainData: data,
+                blockchainData: parsed,
               };
               setMessages(prev => [...prev, blockchainMessage]);
               toast.success("연구 결과가 블록체인에 저장되었습니다");
@@ -177,12 +201,12 @@ export default function GeneAnalysisPage() {
             } else if (eventType === "error" || eventType === "blockchain_error") {
               const errorMessage: Message = {
                 role: "system",
-                content: data.error || "오류가 발생했습니다",
+                content: parsed.error || "오류가 발생했습니다",
                 timestamp: new Date(),
                 type: "error",
               };
               setMessages(prev => [...prev, errorMessage]);
-              toast.error(data.error || "오류가 발생했습니다");
+              toast.error(parsed.error || "오류가 발생했습니다");
             }
           }
         }
@@ -307,54 +331,105 @@ export default function GeneAnalysisPage() {
                           )}
 
                           <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
+                            className={`max-w-[80%] rounded-lg ${
                               message.role === "user"
-                                ? "bg-accent text-background"
+                                ? "bg-accent text-background p-3"
                                 : message.type === "error"
-                                  ? "bg-destructive/20 border border-destructive/50"
+                                  ? "bg-destructive/20 border border-destructive/50 p-3"
                                   : message.type === "blockchain"
-                                    ? "bg-accent/10 border border-accent/50"
-                                    : "bg-muted"
+                                    ? "bg-accent/10 border border-accent/50 p-4"
+                                    : message.type === "result"
+                                      ? "bg-primary/10 border border-primary/30 p-4"
+                                      : message.type === "log"
+                                        ? "bg-muted/50 border border-muted"
+                                        : "bg-muted p-3"
                             }`}
                           >
                             {message.type === "blockchain" && message.blockchainData ? (
-                              <div className="space-y-2">
-                                <p className="font-medium text-sm flex items-center gap-2">
-                                  <Database className="h-4 w-4" />
-                                  {message.content}
+                              <div className="space-y-3">
+                                <p className="font-semibold text-base flex items-center gap-2 text-accent">
+                                  <Database className="h-5 w-5" />
+                                  블록체인 저장 완료
                                 </p>
-                                <div className="text-xs space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">트랜잭션:</span>
-                                    <code className="font-mono">
-                                      {message.blockchainData.transaction_hash.slice(0, 10)}...
-                                    </code>
-                                    <a
-                                      href={`https://sepolia.basescan.org/tx/${message.blockchainData.transaction_hash}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-accent hover:underline inline-flex items-center gap-1"
-                                    >
-                                      <ExternalLink className="h-3 w-3" />
-                                      탐색기에서 보기
-                                    </a>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-muted-foreground font-medium">트랜잭션 해시</span>
+                                    <div className="flex items-center gap-2 bg-background/50 p-2 rounded font-mono text-xs">
+                                      <code className="break-all">{message.blockchainData.transaction_hash}</code>
+                                      <a
+                                        href={`https://sepolia.basescan.org/tx/${message.blockchainData.transaction_hash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-accent hover:underline inline-flex items-center gap-1 shrink-0"
+                                      >
+                                        <ExternalLink className="h-3 w-3" />
+                                        탐색기
+                                      </a>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="text-muted-foreground">연구 ID: </span>
-                                    {message.blockchainData.research_id}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-background/50 p-2 rounded">
+                                      <span className="text-muted-foreground text-xs">연구 ID</span>
+                                      <p className="font-mono font-medium">#{message.blockchainData.research_id}</p>
+                                    </div>
+                                    <div className="bg-background/50 p-2 rounded">
+                                      <span className="text-muted-foreground text-xs">블록 번호</span>
+                                      <p className="font-mono font-medium">{message.blockchainData.block_number}</p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span className="text-muted-foreground">블록 번호: </span>
-                                    {message.blockchainData.block_number}
+                                  <div className="bg-background/50 p-2 rounded">
+                                    <span className="text-muted-foreground text-xs">가스 사용량</span>
+                                    <p className="font-mono font-medium">
+                                      {message.blockchainData.gas_used.toLocaleString()} gas
+                                    </p>
                                   </div>
                                 </div>
                               </div>
+                            ) : message.type === "result" ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Bot className="h-5 w-5 text-primary" />
+                                  <span className="font-semibold text-base text-primary">최종 분석 결과</span>
+                                </div>
+                                <div className="prose prose-sm max-w-none">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-3">
+                                  {message.timestamp.toLocaleTimeString("ko-KR")}
+                                </p>
+                              </div>
+                            ) : message.type === "log" ? (
+                              <Collapsible
+                                open={expandedLogs[index]}
+                                onOpenChange={open => setExpandedLogs(prev => ({ ...prev, [index]: open }))}
+                              >
+                                <div className="p-2">
+                                  <CollapsibleTrigger className="flex items-center justify-between w-full hover:bg-muted/50 p-2 rounded transition-colors">
+                                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                                      <Bot className="h-3 w-3" />
+                                      추론 과정 #{index + 1}
+                                    </span>
+                                    {expandedLogs[index] ? (
+                                      <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                    )}
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="mt-2">
+                                    <div className="bg-background/50 p-3 rounded text-xs font-mono">
+                                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                    </div>
+                                  </CollapsibleContent>
+                                </div>
+                              </Collapsible>
                             ) : (
-                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                              <>
+                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {message.timestamp.toLocaleTimeString("ko-KR")}
+                                </p>
+                              </>
                             )}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {message.timestamp.toLocaleTimeString("ko-KR")}
-                            </p>
                           </div>
 
                           {message.role === "user" && (

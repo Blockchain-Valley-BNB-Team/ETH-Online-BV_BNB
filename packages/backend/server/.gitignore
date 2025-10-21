@@ -15,6 +15,10 @@ venv.bak/
 .env
 .env.local
 
+# Server startup scripts with hardcoded credentials (NEVER commit these!)
+start_server_fixed.ps1
+*_fixed.ps1
+
 # Biomni data
 data/
 *.pkl

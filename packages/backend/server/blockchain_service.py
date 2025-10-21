@@ -140,8 +140,24 @@ class BlockchainService:
         researcher_address = Web3.to_checksum_address(researcher_address)
         
         # 결과 데이터 요약 (가스비 절약)
-        # 최대 1000자로 제한
-        truncated_data = result_data[:1000] if len(result_data) > 1000 else result_data
+        # 최대 500자로 제한 (더 짧게 요약하여 가스 절약)
+        truncated_data = result_data[:500] if len(result_data) > 500 else result_data
+        
+        # 가스 추정
+        try:
+            estimated_gas = self.contract.functions.storeResearch(
+                researcher_address,
+                truncated_data,
+                session_id
+            ).estimate_gas({
+                'from': self.account.address
+            })
+            # 추정치의 1.5배로 설정 (여유 확보)
+            gas_limit = int(estimated_gas * 1.5)
+            print(f"Estimated gas: {estimated_gas}, Using gas limit: {gas_limit}")
+        except Exception as e:
+            print(f"Gas estimation failed: {e}, using default 1,000,000")
+            gas_limit = 1000000
         
         # 트랜잭션 빌드
         tx = self.contract.functions.storeResearch(
@@ -151,7 +167,7 @@ class BlockchainService:
         ).build_transaction({
             'from': self.account.address,
             'nonce': self.w3.eth.get_transaction_count(self.account.address),
-            'gas': 500000,
+            'gas': gas_limit,
             'gasPrice': self.w3.eth.gas_price
         })
         

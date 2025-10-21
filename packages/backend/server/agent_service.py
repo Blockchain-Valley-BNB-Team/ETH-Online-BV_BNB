@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import os
 
 # Biomni 임포트 시도
 try:
@@ -37,10 +38,32 @@ class BiomniAgentService:
             raise Exception("Biomni is not installed")
         
         if self.agent is None:
-            llm = config.llm if config else "gpt-5-nano"
+            llm = config.llm if config and hasattr(config, "llm") else "gpt-5-mini"
             data_path = "./data"
             use_tool_retriever = config.use_tool_retriever if config and hasattr(config, 'use_tool_retriever') else True
             timeout_seconds = config.timeout_seconds if config and hasattr(config, 'timeout_seconds') else 1200
+
+            resolved_source = None
+            if config and hasattr(config, "source") and config.source:
+                resolved_source = config.source
+            else:
+                env_source = os.getenv("LLM_SOURCE")
+                if env_source:
+                    resolved_source = env_source
+                elif llm and llm.startswith("gpt-"):
+                    resolved_source = "OpenAI"
+
+            # OpenAI 모델 사용 시 API Key 확인 (유연한 폴백: config.api_key → env → default_config.api_key)
+            resolved_api_key = None
+            if config and hasattr(config, "api_key") and config.api_key:
+                resolved_api_key = config.api_key
+            elif resolved_source == "OpenAI":
+                resolved_api_key = os.getenv("OPENAI_API_KEY") or getattr(default_config, "api_key", None)
+                # 강제 예외 대신 경고만 출력하고 진행 (get_llm에서도 env를 재확인)
+                if not resolved_api_key:
+                    print(
+                        "[WARN] OPENAI_API_KEY가 감지되지 않았습니다. .env 또는 환경 변수 설정을 확인하세요."
+                    )
             
             print(f"Initializing Biomni agent with LLM: {llm}")
             print(f"Data path: {data_path}")
@@ -50,16 +73,19 @@ class BiomniAgentService:
             # IMPORTANT: Configure default_config for ALL operations (agent + database queries)
             # According to Biomni docs, direct A1() params only affect agent reasoning
             default_config.llm = llm
-            default_config.source = "OpenAI"
+            default_config.source = resolved_source
             default_config.timeout_seconds = timeout_seconds
             default_config.use_tool_retriever = use_tool_retriever
             default_config.path = data_path
             
-            print("✅ default_config updated for consistent Gemini usage")
+            print("✅ default_config updated for consistent OpenAI/Gemini usage")
             
             # Biomni A1 에이전트 초기화
             # default_config를 사용하므로 파라미터 없이 초기화
-            self.agent = A1()
+            agent_kwargs = {}
+            if resolved_api_key:
+                agent_kwargs["api_key"] = resolved_api_key
+            self.agent = A1(**agent_kwargs)
             
             # 에이전트 설정 (self_critic 모드)
             self.agent.configure(
@@ -183,24 +209,80 @@ class BiomniAgentService:
                 }
                 return
             
-            # 로그를 청크 단위로 스트리밍
-            for i, entry in enumerate(log):
-                chunk = {
-                    "type": "log",
-                    "content": str(entry),
-                    "index": i,
+            # 로그에서 '생각', '계획' 추출 (휴리스틱)
+            try:
+                full_log_text = "\n".join([str(entry) for entry in log])
+                # 기본 인덱스 찾기
+                idx_thought = full_log_text.find("생각")
+                # '생각 및 계획' 케이스 포함
+                if idx_thought == -1:
+                    idx_thought = full_log_text.find("생각 및 계획")
+                idx_plan = full_log_text.find("계획")
+                # 종료 후보들
+                end_markers = [
+                    "진행 상황 업데이트",
+                    "</solution>",
+                    "<solution>",
+                    "당뇨",
+                    "최종",
+                    "Ai Message",
+                ]
+                def find_next(start_idx: int) -> int:
+                    cands = [full_log_text.find(m, start_idx + 1) for m in end_markers]
+                    cands = [c for c in cands if c != -1]
+                    return min(cands) if cands else -1
+                thinking_text = ""
+                plan_text = ""
+                if idx_thought != -1 and (idx_plan == -1 or idx_thought < idx_plan):
+                    end_idx = idx_plan if idx_plan != -1 else find_next(idx_thought)
+                    end_idx = end_idx if end_idx != -1 else idx_thought + 1200
+                    thinking_text = full_log_text[idx_thought:end_idx].strip()
+                if idx_plan != -1:
+                    end_idx = find_next(idx_plan)
+                    end_idx = end_idx if end_idx != -1 else idx_plan + 2000
+                    plan_text = full_log_text[idx_plan:end_idx].strip()
+                # 헤더 줄 제거 (처음 줄에 '생각'/'계획' 단어만 있을 때)
+                def clean_section(s: str) -> str:
+                    lines = s.splitlines()
+                    if lines and ("생각" in lines[0] or "계획" in lines[0]):
+                        return "\n".join(lines[1:]).strip()
+                    return s.strip()
+                thinking_text = clean_section(thinking_text)
+                plan_text = clean_section(plan_text)
+            except Exception as _:
+                thinking_text = ""
+                plan_text = ""
+            
+            # 필요한 정보만 순서대로 전송: 생각 -> 계획 -> 최종 결과
+            if thinking_text:
+                yield {
+                    "type": "thinking",
+                    "content": thinking_text,
                     "timestamp": datetime.now().isoformat()
                 }
-                yield chunk
-                
-                # 너무 빠르게 전송되지 않도록 약간의 지연
-                await asyncio.sleep(0.05)
+            if plan_text:
+                yield {
+                    "type": "plan",
+                    "content": plan_text,
+                    "timestamp": datetime.now().isoformat()
+                }
             
-            # 최종 결과 전송
+            # 최종 결과 전송 (연구결과)
             print(f"[Session {session_id}] Sending final result to client")
+            # <solution>...</solution> 내부만 추출하여 보고서 본문으로 전달
+            def extract_solution(text: str) -> str:
+                try:
+                    start = text.find("<solution>")
+                    end = text.find("</solution>")
+                    if start != -1 and end != -1 and end > start:
+                        return text[start + len("<solution>"):end].strip()
+                    return text.strip()
+                except Exception:
+                    return text.strip()
+            report_only = extract_solution(final_result)
             yield {
                 "type": "result",
-                "content": final_result,
+                "content": report_only,
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -208,7 +290,7 @@ class BiomniAgentService:
             full_log = "\n".join([str(entry) for entry in log])
             self.sessions[session_id]["messages"].append({
                 "role": "assistant",
-                "content": final_result,
+                "content": report_only,
                 "full_log": full_log,
                 "timestamp": datetime.now()
             })

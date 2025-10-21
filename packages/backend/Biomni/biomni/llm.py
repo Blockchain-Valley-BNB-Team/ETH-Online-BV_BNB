@@ -47,7 +47,7 @@ def get_llm(
 
     # Use defaults if still not specified
     if model is None:
-        model = "gpt-5-nano"
+        model = "gpt-5-mini"
     if temperature is None:
         temperature = 0.7
     if api_key is None:
@@ -104,7 +104,14 @@ def get_llm(
             )
         # Prefer explicit api_key (including from config), then OPENAI_API_KEY
         openai_key = api_key if (api_key is not None and api_key != "EMPTY") else os.getenv("OPENAI_API_KEY")
-        return ChatOpenAI(model=model, temperature=temperature, stop_sequences=stop_sequences, api_key=openai_key)
+        # Only pass api_key if it's explicitly set; otherwise let ChatOpenAI read from environment
+        openai_kwargs = {"model": model, "temperature": temperature}
+        # Note: stop_sequences not supported by gpt-5-nano and some other models
+        if stop_sequences and not model.startswith("gpt-5"):
+            openai_kwargs["stop_sequences"] = stop_sequences
+        if openai_key:
+            openai_kwargs["api_key"] = openai_key
+        return ChatOpenAI(**openai_kwargs)
 
     elif source == "AzureOpenAI":
         try:

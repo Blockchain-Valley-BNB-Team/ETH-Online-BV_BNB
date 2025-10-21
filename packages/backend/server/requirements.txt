@@ -13,6 +13,21 @@ python-dotenv==1.0.1
 web3==6.15.1
 eth-account==0.11.0
 
-# Biomni (로컬 설치)
-# pip install -e ../Biomni
+# Core runtime utilities
+requests>=2.31.0
+pandas>=2.3.0
+
+# LLM integrations used by Biomni
+openai>=1.58.0
+langchain-openai==1.0.0
+langchain-anthropic==1.0.0
+
+# Literature / search tooling used by Biomni tools
+beautifulsoup4==4.12.3
+PyPDF2==3.0.1
+duckduckgo-search>=6.3.0
+googlesearch-python==1.2.5
+scholarly>=1.7.11
+pymed>=0.8.9
+arxiv>=2.1.0
 

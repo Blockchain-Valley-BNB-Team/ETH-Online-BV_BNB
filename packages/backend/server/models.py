@@ -17,7 +17,7 @@ class ChatMessage(BaseModel):
 
 class AgentConfig(BaseModel):
     """Biomni 에이전트 설정"""
-    llm: str = Field(default="gpt-5-nano", description="사용할 LLM 모델")
+    llm: str = Field(default="gpt-5-mini", description="사용할 LLM 모델")
     timeout_seconds: int = Field(default=1200, description="타임아웃 시간 (초)")
     use_tool_retriever: bool = Field(default=True, description="도구 검색 사용 여부")
 
