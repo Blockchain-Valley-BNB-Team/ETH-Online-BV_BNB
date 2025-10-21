@@ -1,30 +1,110 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Footer } from "@/components/Footer";
 import { DnaVisualization } from "@/components/dna-visualization";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileCheck, Loader2, Upload } from "lucide-react";
+import { AlertCircle, FileCheck, Loader2, Upload, X } from "lucide-react";
 
 export default function GeneAnalysisPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState<string>("");
+  const [fileSize, setFileSize] = useState<number>(0);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [error, setError] = useState<string>("");
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const supportedFormats = [".fasta", ".fastq", ".vcf", ".csv"];
+  const maxFileSize = 100 * 1024 * 1024; // 100MB
+
+  const validateFile = (file: File): string | null => {
+    const extension = "." + file.name.split(".").pop()?.toLowerCase();
+
+    if (!supportedFormats.includes(extension)) {
+      return `Unsupported file format. Please upload: ${supportedFormats.join(", ")}`;
+    }
+
+    if (file.size > maxFileSize) {
+      return `File size too large. Maximum size is ${maxFileSize / (1024 * 1024)}MB`;
+    }
+
+    return null;
+  };
+
+  const handleFileUpload = (file: File) => {
+    setError("");
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setFileName(file.name);
+    setFileSize(file.size);
+    setStep(2);
+    setIsProcessing(true);
+    setUploadProgress(0);
+
+    // Simulate upload progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          setIsProcessing(false);
+          setStep(3);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 300);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFileName(file.name);
-      setStep(2);
-      setIsProcessing(true);
-      // Simulate processing
-      setTimeout(() => {
-        setIsProcessing(false);
-        setStep(3);
-      }, 3000);
+      handleFileUpload(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleSelectFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const resetUpload = () => {
+    setStep(1);
+    setFileName("");
+    setFileSize(0);
+    setUploadProgress(0);
+    setError("");
+    setIsProcessing(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -91,22 +171,50 @@ export default function GeneAnalysisPage() {
             <CardContent className="p-8">
               {step === 1 && (
                 <div className="space-y-6">
-                  <div className="border-2 border-dashed border-muted rounded-lg p-12 text-center hover:border-accent/50 transition-colors">
-                    <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-12 text-center transition-all duration-200 ${
+                      isDragOver
+                        ? "border-accent bg-accent/10"
+                        : error
+                          ? "border-red-500 bg-red-500/10"
+                          : "border-muted hover:border-accent/50"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <Upload
+                      className={`w-12 h-12 mx-auto mb-4 ${isDragOver ? "text-accent" : "text-muted-foreground"}`}
+                    />
                     <h3 className="text-lg font-semibold mb-2">Upload Gene Data</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Supports FASTA, FASTQ, VCF, and CSV formats</p>
-                    <label htmlFor="file-upload">
-                      <Button className="bg-[oklch(0.65_0.18_60)] text-background hover:bg-[oklch(0.6_0.18_60)]">
-                        Select File
-                      </Button>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        className="hidden"
-                        accept=".fasta,.fastq,.vcf,.csv"
-                        onChange={handleFileUpload}
-                      />
-                    </label>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Drag and drop your file here, or click to select
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Supports FASTA, FASTQ, VCF, and CSV formats (Max 100MB)
+                    </p>
+
+                    {error && (
+                      <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <AlertCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-sm text-red-500">{error}</span>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleSelectFile}
+                      className="bg-[oklch(0.65_0.18_60)] text-background hover:bg-[oklch(0.6_0.18_60)]"
+                    >
+                      Select File
+                    </Button>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".fasta,.fastq,.vcf,.csv"
+                      onChange={handleFileInputChange}
+                    />
                   </div>
                 </div>
               )}
@@ -115,14 +223,31 @@ export default function GeneAnalysisPage() {
                 <div className="space-y-6">
                   <div className="flex flex-col items-center justify-center py-12">
                     <DnaVisualization />
-                    <div className="mt-8 text-center">
+                    <div className="mt-8 text-center max-w-md">
                       {isProcessing ? (
                         <>
                           <Loader2 className="w-8 h-8 mx-auto mb-4 text-accent animate-spin" />
                           <h3 className="text-lg font-semibold mb-2">Processing {fileName}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground mb-4">
                             AI is analyzing your genomic data... This may take a few moments.
                           </p>
+
+                          {/* Progress Bar */}
+                          <div className="w-full bg-muted rounded-full h-2 mb-2">
+                            <div
+                              className="bg-accent h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">{uploadProgress}% complete</p>
+
+                          {/* File Info */}
+                          <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                            <p className="text-xs text-muted-foreground">File: {fileName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Size: {(fileSize / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                          </div>
                         </>
                       ) : (
                         <>
@@ -219,16 +344,14 @@ export default function GeneAnalysisPage() {
                   </Card>
 
                   <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setStep(1);
-                        setFileName("");
-                      }}
-                    >
+                    <Button variant="outline" onClick={resetUpload} className="gap-2">
+                      <X className="w-4 h-4" />
                       Analyze New Sample
                     </Button>
-                    <Button className="bg-accent text-background hover:bg-accent/90">Download Report</Button>
+                    <Button className="bg-accent text-background hover:bg-accent/90 gap-2">
+                      <FileCheck className="w-4 h-4" />
+                      Download Report
+                    </Button>
                   </div>
                 </div>
               )}
