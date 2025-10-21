@@ -76,7 +76,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 source .venv/bin/activate
 ```
 
-### 4. pip 업그레이드
+### 4. pip 업그레이드!
 
 ```bash
 pip install --upgrade pip
