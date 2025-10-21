@@ -1,0 +1,226 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_researcher",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "_resultData",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_sessionId",
+        "type": "string"
+      }
+    ],
+    "name": "storeResearch",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_researcher",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_researchId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getResearch",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "researcher",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "resultData",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "sessionId",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct ResearchRegistry.ResearchResult",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_researcher",
+        "type": "address"
+      }
+    ],
+    "name": "getResearchCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_researcher",
+        "type": "address"
+      }
+    ],
+    "name": "getLatestResearch",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "researcher",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "resultData",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "sessionId",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct ResearchRegistry.ResearchResult",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "researchCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "researchResults",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "researcher",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "resultData",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "sessionId",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "researcher",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "researchId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "sessionId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "ResearchStored",
+    "type": "event"
+  }
+]

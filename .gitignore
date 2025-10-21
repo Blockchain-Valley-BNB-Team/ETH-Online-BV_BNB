@@ -23,3 +23,16 @@ node_modules
 dist
 
 packages/nextjs/app/debug/*
+
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+

@@ -28,3 +28,6 @@ deployments/localhost
 
 # other
 temp
+
+ignition/deployments/*
+!ignition/deployments/localhost
