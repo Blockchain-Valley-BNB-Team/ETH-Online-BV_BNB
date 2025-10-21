@@ -1,0 +1,946 @@
+# BV_BNB (Biomni DeSci) Project Coding Rules
+
+This document defines all linting, formatting, and architecture rules to follow when writing code for the BV_BNB project.
+
+---
+
+## 1. Project Structure
+
+### Monorepo Configuration
+- **Yarn Workspace Monorepo** (yarn@3.2.3)
+- **packages/nextjs**: Next.js 15.2.4 App Router-based frontend
+- **packages/hardhat**: Hardhat-based smart contracts
+- **packages/backend**: Backend services (separate folder)
+
+### Next.js Project Structure
+```
+packages/nextjs/
+├── app/                    # Next.js App Router pages
+│   ├── dashboard/
+│   ├── research-pool/
+│   ├── tools/
+│   └── profile/
+├── components/             # React components
+│   ├── scaffold-eth/      # SE-2 base components
+│   └── ui/                # shadcn/ui components
+├── hooks/                  # Custom hooks
+│   └── scaffold-eth/      # SE-2 hooks (useScaffoldReadContract, etc.)
+├── contracts/              # Contract ABI and addresses
+├── utils/                  # Utility functions
+├── services/               # State management and Web3 configuration
+└── styles/                 # Global styles
+```
+
+---
+
+## 2. TypeScript Configuration
+
+### Compiler Options (tsconfig.json)
+```json
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve"
+  }
+}
+```
+
+### Path Aliases
+```typescript
+// Available import paths:
+import { Component } from "~~/components/Component";  // Scaffold-ETH 2 style
+import { Component } from "@/components/Component";   // Next.js style
+
+// Both point to the same path (packages/nextjs/)
+```
+
+**Important**: Use `~~/` or `@/` aliases when importing new files.
+
+---
+
+## 3. ESLint Rules
+
+### Configuration File: `packages/nextjs/eslint.config.mjs`
+
+```javascript
+{
+  extends: ["next/core-web-vitals", "next/typescript", "prettier"],
+  rules: {
+    "@typescript-eslint/no-explicit-any": "off",      // Allow any type
+    "@typescript-eslint/ban-ts-comment": "off",       // Allow @ts-ignore comments
+    "prettier/prettier": ["warn", { endOfLine: "auto" }]
+  }
+}
+```
+
+### Code Writing Guidelines
+1. **No unused imports**: All imported items must be used in the code.
+   ```typescript
+   // ❌ Wrong
+   import { Button, Card } from "lucide-react";  // Card is unused
+   
+   // ✅ Correct
+   import { Button } from "lucide-react";
+   ```
+
+2. **Follow Next.js App Router rules**:
+   - Client components require `"use client"` directive
+   - Server components cannot use `useState`, `useEffect`, etc.
+
+3. **TypeScript strict mode**:
+   - Type annotations recommended, but `any` is allowed (rule off)
+   - **When to use `any`**:
+     - Temporarily handling complex types from external libraries
+     - Rapid prototyping in early development stages
+     - When type inference is genuinely too complex to resolve
+   - **Prefer `unknown` over `any`** when possible for better type safety
+   - Use `// @ts-expect-error` or `// @ts-ignore` with explanatory comments for edge cases
+
+---
+
+## 4. Prettier Rules
+
+### Configuration File: `packages/nextjs/.prettierrc.js`
+
+```javascript
+{
+  arrowParens: "avoid",           // Omit arrow function parameter parens
+  printWidth: 120,                // Max line length 120 characters
+  tabWidth: 2,                    // Tab width 2 spaces
+  trailingComma: "all",           // Trailing commas everywhere
+  
+  // Import order
+  importOrder: [
+    "^react$",                    // 1. React
+    "^next/(.*)$",                // 2. Next.js
+    "<THIRD_PARTY_MODULES>",      // 3. External libraries
+    "^@heroicons/(.*)$",          // 4. Heroicons
+    "^~~/(.*)$"                   // 5. Project internal (~~/ alias)
+  ],
+  importOrderSortSpecifiers: true
+}
+```
+
+### Import Order Example
+```typescript
+// ✅ Correct import order
+import React from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import { Button } from "~~/components/ui/button";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+```
+
+**Note**: Prefer `~~/` alias for internal imports to maintain consistency with Scaffold-ETH 2 conventions. `@/` alias can also be used but stick to one style within each file.
+
+---
+
+## 5. CSS and Styling Rules
+
+### CSS Frameworks
+- **Tailwind CSS v4.1.9** (Latest version, CSS-based configuration)
+- **DaisyUI 5.0.9** (Themes: light, dark)
+- **shadcn/ui** (New York style)
+
+### Tailwind CSS Usage Rules
+1. **Use CSS variables**: Utilize design tokens defined in `globals.css`
+   ```typescript
+   // ✅ Use Tailwind classes
+   <div className="bg-background text-foreground" />
+   <div className="bg-accent text-accent-foreground" />
+   ```
+
+2. **Color System** (Light/Dark mode):
+   - `background`, `foreground`: Base background/text
+   - `card`, `card-foreground`: Card components
+   - `primary`, `secondary`, `accent`: Brand colors
+   - `muted`, `muted-foreground`: Secondary text
+   - `destructive`: Warning/delete actions
+
+3. **Dark Mode Support**:
+   ```typescript
+   // Colors automatically change based on .dark class
+   <div className="bg-card text-card-foreground" />
+   ```
+
+### DaisyUI Components
+```typescript
+// DaisyUI button styles available
+<button className="btn btn-primary">Button</button>
+<button className="btn btn-ghost">Ghost Button</button>
+```
+
+---
+
+## 6. Scaffold-ETH 2 (SE-2) Framework Rules
+
+### Project Overview
+This project is based on **Scaffold-ETH 2 (SE-2)**, providing everything needed for Ethereum dApp development.
+
+**Tech Stack:**
+- Next.js 15.2.4 (App Router)
+- RainbowKit (Wallet connection)
+- Wagmi v2 (Ethereum library)
+- Viem (Type-safe Ethereum utilities)
+- TypeScript
+- Hardhat (Smart contract development)
+
+**Contract Data Sources:**
+- SE-2 reads contract information from `packages/nextjs/contracts/deployedContracts.ts` and `externalContracts.ts`.
+- ABI and addresses are automatically updated when contracts are deployed.
+
+### Smart Contract Interaction (Required Rules)
+
+#### Reading Contract Data
+**Always use `useScaffoldReadContract` hook**
+
+Location: `packages/nextjs/hooks/scaffold-eth/useScaffoldReadContract.ts`
+
+```typescript
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+
+const { data: balance } = useScaffoldReadContract({
+  contractName: "YourContract",
+  functionName: "getBalance",
+  args: [userAddress],  // optional
+});
+
+// Example: Complex data structure
+const { data: userData } = useScaffoldReadContract({
+  contractName: "YourContract",
+  functionName: "getUserData",
+  args: [address],
+});
+```
+
+#### Writing Contract Data
+**Always use `useScaffoldWriteContract` hook**
+
+Location: `packages/nextjs/hooks/scaffold-eth/useScaffoldWriteContract.ts`
+
+Usage:
+1. Initialize hook with contract name only
+2. Call `writeContractAsync` function
+
+```typescript
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { parseEther } from "viem";
+
+const { writeContractAsync } = useScaffoldWriteContract({
+  contractName: "YourContract"
+});
+
+// Send transaction
+await writeContractAsync({
+  functionName: "transfer",
+  args: [recipient, amount],  // optional
+  value: parseEther("0.1"),   // optional, for payable functions
+});
+
+// Example: Real usage
+const handleTransfer = async () => {
+  try {
+    await writeContractAsync({
+      functionName: "transfer",
+      args: [recipientAddress, parseEther("1.0")],
+    });
+    toast.success("Transfer successful!");
+  } catch (error) {
+    console.error("Transfer failed:", error);
+    toast.error("Transfer failed.");
+  }
+};
+```
+
+#### Reading Events
+**Use `useScaffoldEventHistory` hook**
+
+Location: `packages/nextjs/hooks/scaffold-eth/useScaffoldEventHistory.ts`
+
+```typescript
+import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+
+const { data: events, isLoading, error } = useScaffoldEventHistory({
+  contractName: "YourContract",
+  eventName: "GreetingChange",
+  watch: true,  // optional, real-time updates
+});
+
+// Display events example
+<div>
+  {events?.map((event) => (
+    <div key={event.logIndex}>
+      <p>Setter: {event.args.greetingSetter}</p>
+      <p>Greeting: {event.args.newGreeting}</p>
+      <p>Premium: {event.args.premium?.toString()}</p>
+      <p>Value: {event.args.value?.toString()}</p>
+    </div>
+  ))}
+</div>
+```
+
+### Other SE-2 Hooks (packages/nextjs/hooks/scaffold-eth/)
+
+- **`useScaffoldWatchContractEvent`**: Real-time event monitoring (callback on new events)
+- **`useScaffoldEventHistory`**: Query and watch past events
+- **`useDeployedContractInfo`**: Deployed contract information (ABI, address)
+- **`useScaffoldContract`**: Direct contract instance access
+- **`useTransactor`**: Transaction sending wrapper (loading/success/failure state management)
+
+### 🚨 Important: Contract Interaction Prohibitions
+
+**Never use other patterns!**
+
+```typescript
+// ❌ Absolutely prohibited: Direct Wagmi usage
+import { useReadContract, useWriteContract } from "wagmi";
+
+// ❌ Absolutely prohibited: Direct Viem usage
+import { publicClient } from "viem";
+
+// ✅ Must use: SE-2 hooks
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+```
+
+**Reasons:**
+- SE-2 hooks automatically manage contract ABI and addresses
+- Type safety is guaranteed
+- Error handling and loading states are built-in
+- Automatic handling of network changes
+
+---
+
+## 7. Component Library Usage Rules
+
+### Component Naming and Structure Conventions
+
+#### File Naming
+- **Components**: Use PascalCase for component files (e.g., `MyComponent.tsx`)
+- **Utilities/Hooks**: Use camelCase for non-component files (e.g., `useCustomHook.ts`, `formatAddress.ts`)
+- **Constants**: Use UPPER_SNAKE_CASE for constant files (e.g., `API_ENDPOINTS.ts`)
+
+#### Folder Structure
+```
+components/
+├── scaffold-eth/        # SE-2 base components
+│   ├── Address/
+│   │   ├── Address.tsx
+│   │   ├── AddressCopyIcon.tsx
+│   │   └── index.tsx    # Export barrel
+│   └── Balance.tsx      # Simple component (single file)
+├── ui/                  # shadcn/ui components
+│   ├── button.tsx
+│   ├── card.tsx
+│   └── dialog.tsx
+└── MyFeature/           # Complex feature component
+    ├── MyFeature.tsx
+    ├── MyFeatureItem.tsx
+    ├── useMyFeature.ts
+    └── index.tsx
+```
+
+#### Component Export Patterns
+```typescript
+// ✅ Use barrel exports (index.ts) for complex components
+// components/MyFeature/index.ts
+export { MyFeature } from "./MyFeature";
+export { MyFeatureItem } from "./MyFeatureItem";
+export { useMyFeature } from "./useMyFeature";
+
+// ✅ Import from the directory
+import { MyFeature, useMyFeature } from "~~/components/MyFeature";
+
+// ❌ Do not import from specific files when barrel exists
+import { MyFeature } from "~~/components/MyFeature/MyFeature";
+```
+
+#### Component Structure Order
+```typescript
+"use client";  // 1. Directives (if needed)
+
+// 2. Imports (following Prettier order)
+import React from "react";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+
+// 3. Types/Interfaces
+interface MyComponentProps {
+  title: string;
+}
+
+// 4. Component definition
+export function MyComponent({ title }: MyComponentProps) {
+  // 4a. Hooks
+  const { data } = useScaffoldReadContract({...});
+  
+  // 4b. State
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // 4c. Effects
+  useEffect(() => {...}, []);
+  
+  // 4d. Handlers
+  const handleClick = () => {...};
+  
+  // 4e. Render helpers
+  const renderContent = () => {...};
+  
+  // 4f. Return JSX
+  return <div>...</div>;
+}
+```
+
+---
+
+### Scaffold-ETH 2 Components (Required)
+
+#### Address Component
+**Always use when displaying Ethereum addresses**
+```typescript
+import { Address } from "~~/components/scaffold-eth";
+
+<Address address={userAddress} />
+```
+
+#### AddressInput Component
+**Always use when users need to input addresses**
+```typescript
+import { AddressInput } from "~~/components/scaffold-eth";
+
+<AddressInput
+  value={address}
+  onChange={setAddress}
+  placeholder="Recipient address"
+/>
+```
+
+#### Balance Component
+**Display address balance**
+```typescript
+import { Balance } from "~~/components/scaffold-eth";
+
+<Balance address={userAddress} />
+<Balance address={userAddress} usdMode />  // USD units
+```
+
+#### EtherInput Component
+**ETH amount input**
+```typescript
+import { EtherInput } from "~~/components/scaffold-eth";
+
+<EtherInput
+  value={amount}
+  onChange={setAmount}
+  placeholder="0.0"
+/>
+```
+
+### shadcn/ui Components
+**Location**: `packages/nextjs/components/ui/`
+
+```typescript
+// Buttons
+import { Button } from "~~/components/ui/button";
+<Button variant="default" size="lg">Click</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="ghost">Ghost</Button>
+
+// Cards
+import { Card, CardHeader, CardTitle, CardContent } from "~~/components/ui/card";
+
+// Dialogs
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~~/components/ui/dialog";
+
+// Forms
+import { Form, FormField, FormItem, FormLabel, FormControl } from "~~/components/ui/form";
+import { Input } from "~~/components/ui/input";
+import { Textarea } from "~~/components/ui/textarea";
+```
+
+### Icon Libraries
+
+#### lucide-react (Primary)
+```typescript
+import { Menu, X, ChevronDown, User, Settings } from "lucide-react";
+<Menu className="h-5 w-5" />
+```
+
+#### @heroicons/react (Scaffold-ETH 2 default)
+```typescript
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+<Bars3Icon className="h-6 w-6" />
+```
+
+---
+
+## 8. Next.js Configuration and Optimization
+
+### next.config.ts Key Settings
+```typescript
+{
+  reactStrictMode: true,
+  typescript: {
+    ignoreBuildErrors: true,    // Ignore TS errors during build (in development)
+  },
+  eslint: {
+    ignoreDuringBuilds: true,   // Ignore ESLint during builds (in development)
+  },
+  images: {
+    unoptimized: true,          // Disable image optimization (for IPFS deployment)
+  }
+}
+```
+
+### Image Usage
+```typescript
+import Image from "next/image";
+
+// ✅ Use Next.js Image component
+<Image
+  src="/logo.svg"
+  alt="Logo"
+  width={100}
+  height={100}
+/>
+```
+
+### Link Usage
+```typescript
+import Link from "next/link";
+
+// ✅ Use Next.js Link component
+<Link href="/dashboard">Dashboard</Link>
+```
+
+---
+
+## 9. State Management
+
+### Zustand (Global State)
+**Location**: `packages/nextjs/services/store/store.ts`
+
+```typescript
+import { create } from "zustand";
+
+// Create state
+const useStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+
+// Use in component
+const count = useStore((state) => state.count);
+const increment = useStore((state) => state.increment);
+```
+
+### TanStack Query (Server State)
+```typescript
+import { useQuery, useMutation } from "@tanstack/react-query";
+
+// Data fetching
+const { data, isLoading, error } = useQuery({
+  queryKey: ['research', id],
+  queryFn: () => fetchResearch(id),
+});
+
+// Data mutation
+const mutation = useMutation({
+  mutationFn: (data) => createResearch(data),
+  onSuccess: () => {
+    // Success handling
+  },
+});
+```
+
+---
+
+## 10. Git Hooks and Pre-commit
+
+### lint-staged Configuration (.lintstagedrc.js)
+Automatically runs before commit:
+```javascript
+{
+  "packages/nextjs/**/*.{ts,tsx}": [
+    "yarn next:lint --fix",        // Auto-fix ESLint
+    "yarn next:check-types"         // TypeScript type checking
+  ]
+}
+```
+
+### Pre-commit Checklist
+1. **Remove unused imports**: ESLint auto-detects
+2. **Resolve TypeScript errors**: Type check must pass
+3. **Prettier formatting**: Auto-applied
+
+---
+
+## 11. Network and Web3 Configuration
+
+### scaffold.config.ts
+```typescript
+{
+  targetNetworks: [chains.baseSepolia, chains.hardhat],
+  pollingInterval: 30000,  // Poll data every 30 seconds
+}
+```
+
+### Supported Networks
+- **Base Sepolia**: Main testnet
+- **Hardhat**: Local development network
+
+---
+
+## 12. Code Writing Best Practices
+
+### Component Writing
+```typescript
+"use client";  // For client components
+
+import React from "react";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { Button } from "~~/components/ui/button";
+import { Address } from "~~/components/scaffold-eth";
+
+export function MyComponent() {
+  // 1. Hook calls
+  const { data } = useScaffoldReadContract({
+    contractName: "YourContract",
+    functionName: "getData",
+  });
+
+  // 2. Event handlers
+  const handleClick = () => {
+    console.log("Clicked");
+  };
+
+  // 3. Return JSX
+  return (
+    <div className="flex flex-col gap-4">
+      <Address address={data?.address} />
+      <Button onClick={handleClick}>Button</Button>
+    </div>
+  );
+}
+```
+
+### Comment Writing
+```typescript
+// Comments can be in any language (keep technical terms in English)
+/**
+ * Fetches user data
+ * @param userId - User ID
+ * @returns User object
+ */
+async function fetchUser(userId: string) {
+  // API call
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
+}
+```
+
+### Error Handling
+```typescript
+try {
+  await writeContractAsync({
+    functionName: "transfer",
+    args: [recipient, amount],
+  });
+  toast.success("Transfer successful!");
+} catch (error) {
+  console.error("Transfer failed:", error);
+  toast.error("Transfer failed.");
+}
+```
+
+---
+
+## 13. Prohibitions and Restrictions
+
+### ❌ Things You Should Never Do
+
+#### 1. Leaving Unused Imports
+```typescript
+// ❌ Prohibited
+import { Button, Card, Dialog } from "lucide-react";  // Card, Dialog unused
+
+// ✅ Correct
+import { Button } from "lucide-react";
+```
+
+#### 2. Direct Wagmi/Viem Usage (Contract Interaction)
+```typescript
+// ❌ Prohibited: Direct Wagmi usage
+import { useReadContract, useWriteContract } from "wagmi";
+
+// ❌ Prohibited: Direct Viem usage
+import { publicClient } from "viem";
+
+// ✅ Use instead: SE-2 hooks
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+```
+
+#### 3. Relative Path Imports (Project Internal)
+```typescript
+// ❌ Prohibited
+import { Button } from "../../../components/ui/button";
+
+// ✅ Use instead
+import { Button } from "~~/components/ui/button";
+// or
+import { Button } from "@/components/ui/button";
+```
+
+#### 4. Inline Styles
+```typescript
+// ❌ Prohibited
+<div style={{ marginTop: "10px", color: "red" }}>
+
+// ✅ Use instead
+<div className="mt-2.5 text-destructive">
+```
+
+#### 5. Direct Environment Variable Exposure
+```typescript
+// ❌ Prohibited
+const apiKey = "sk-abc123...";
+const privateKey = "0x1234...";
+
+// ✅ Use instead
+const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+```
+
+---
+
+### 🚨 AI Assistant Prohibited Actions
+
+The following actions are **absolutely prohibited**:
+
+#### Environment Variable File Modification Prohibited
+**Prohibited targets:**
+- `.env`, `.env.local`, `.env.production`, `.env.*`
+- `.envrc` or other environment configuration files
+
+**Prohibited actions:**
+- Create
+- Edit
+- Rename
+- Delete
+- Add or expose secrets/credentials
+
+**Allowed actions:**
+- Provide environment variable setup instructions **as guidance only**
+- Reference `process.env.VARIABLE_NAME` in example code
+
+**Example:**
+```typescript
+// ✅ Allowed: Use environment variables in code
+const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+
+// ✅ Allowed: Provide instructions to user
+"Add the following environment variable to .env.local:
+NEXT_PUBLIC_ALCHEMY_API_KEY=your_api_key_here"
+
+// ❌ Prohibited: Direct .env file modification
+// Do NOT create or edit .env files!
+```
+
+#### Server Execution/Management Prohibited
+**Prohibited targets:**
+- Local or remote servers
+- Process management
+- Database services
+
+**Prohibited commands:**
+```bash
+# ❌ Prohibited: Server start/stop/restart
+yarn dev
+yarn start
+yarn chain
+node server.js
+hardhat node
+anvil
+docker compose up
+pm2 start
+systemctl start
+
+# ❌ Prohibited: Process management
+pm2 restart
+systemctl restart
+```
+
+**Allowed actions:**
+- Provide execution commands to user **as comments or instructions only**
+
+**Example:**
+```typescript
+// ✅ Allowed: Provide commands as comments
+/**
+ * Start local development environment:
+ * 
+ * 1. Terminal 1: yarn chain  (Local blockchain)
+ * 2. Terminal 2: yarn deploy (Deploy contracts)
+ * 3. Terminal 3: yarn start  (Frontend)
+ */
+
+// ❌ Prohibited: Actually execute server start commands
+// Do NOT call run_terminal_cmd("yarn start")!
+```
+
+#### Summary
+| Action Type | Prohibited | Allowed |
+|-------------|-----------|---------|
+| Environment variable file modification | ❌ | Instructions only ✅ |
+| Server start/stop | ❌ | Comments/instructions only ✅ |
+| Secret key exposure | ❌ | process.env usage ✅ |
+| Environment variable reference in code | ✅ | ✅ |
+
+---
+
+## 14. Development Workflow
+
+### Scaffold-ETH 2 Local Development Flow
+
+#### Step 1: Initial Setup
+```bash
+# Install dependencies
+yarn install
+```
+
+#### Step 2: Start Local Blockchain (Terminal 1)
+```bash
+# Start Hardhat local network
+yarn chain
+```
+> This command starts a local blockchain network. Keep this terminal running.
+
+#### Step 3: Write and Deploy Smart Contracts (Terminal 2)
+```bash
+# Deploy contracts
+yarn deploy
+```
+
+**Contract writing locations:**
+- Contracts: `packages/hardhat/contracts/`
+- Deployment scripts: `packages/hardhat/deploy/`
+- Tests: `packages/hardhat/test/`
+
+**Automatic processing after deployment:**
+- ABI and addresses automatically updated in `packages/nextjs/contracts/deployedContracts.ts`
+- Immediately available in frontend
+
+#### Step 4: Start Frontend (Terminal 3)
+```bash
+# Start Next.js development server
+yarn start
+```
+
+#### Step 5: Test Contracts on Debug Page
+```
+http://localhost:3000/debug
+```
+> On this page, you can test all functions of deployed contracts with a UI.
+
+### Development Iteration Cycle
+
+```
+1. Write/modify smart contracts
+   └─ packages/hardhat/contracts/YourContract.sol
+
+2. Modify deployment script (if needed)
+   └─ packages/hardhat/deploy/00_deploy_your_contract.ts
+
+3. Local deployment
+   └─ yarn deploy
+
+4. Test on /debug page
+   └─ http://localhost:3000/debug
+
+5. Write tests
+   └─ packages/hardhat/test/YourContract.ts
+
+6. Create custom UI
+   └─ packages/nextjs/app/ (use SE-2 components/hooks)
+
+7. Deploy to live network
+   └─ yarn deploy --network baseSepolia
+
+8. Deploy UI
+   └─ yarn vercel (or yarn ipfs)
+```
+
+### Network Configuration Changes
+Configure in `scaffold.config.ts`:
+```typescript
+{
+  targetNetworks: [chains.baseSepolia, chains.hardhat],
+  pollingInterval: 30000,
+}
+```
+
+### Code Quality Checks
+```bash
+# ESLint check
+yarn next:lint
+
+# TypeScript type check
+yarn next:check-types
+
+# Prettier formatting
+yarn next:format
+
+# Hardhat tests
+yarn hardhat:test
+```
+
+### Command Summary
+| Command | Description | Terminal |
+|---------|-------------|----------|
+| `yarn chain` | Start local blockchain | Terminal 1 (keep running) |
+| `yarn deploy` | Deploy contracts | Terminal 2 |
+| `yarn start` | Start frontend | Terminal 3 (keep running) |
+| `yarn next:lint` | ESLint check | As needed |
+| `yarn next:check-types` | TypeScript check | As needed |
+| `yarn hardhat:test` | Contract tests | As needed |
+| `yarn vercel` | Vercel deployment | When deploying |
+| `yarn ipfs` | IPFS deployment | When deploying |
+
+---
+
+## 15. Summary Checklist
+
+Before writing code:
+- [ ] Use path aliases (`~~/`, `@/`)
+- [ ] Import order (React → Next.js → External libraries → Internal)
+- [ ] Remove unused imports
+- [ ] Add `"use client"` to client components
+- [ ] Use Scaffold-ETH 2 hooks (contract interaction)
+- [ ] Use SE-2 components (Address, Balance, etc.)
+- [ ] Use Tailwind CSS classes (no inline styles)
+- [ ] Specify types (when possible)
+- [ ] Add error handling
+
+Before commit:
+- [ ] Pass `yarn next:lint`
+- [ ] Pass `yarn next:check-types`
+- [ ] Git hooks automatically check
+
+---
+
+## References
+
+- **Scaffold-ETH 2 Docs**: https://docs.scaffoldeth.io
+- **Next.js Docs**: https://nextjs.org/docs
+- **Tailwind CSS Docs**: https://tailwindcss.com/docs
+- **shadcn/ui Docs**: https://ui.shadcn.com
+- **DaisyUI Docs**: https://daisyui.com
+- **Wagmi Docs**: https://wagmi.sh
+- **Viem Docs**: https://viem.sh
+
+---
+
+**This rules file should always be kept up-to-date and updated when project settings change.**
