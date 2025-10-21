@@ -28,6 +28,7 @@
     "@typechain/ethers-v6": "~0.5.1",
     "dotenv": "~16.4.5",
     "envfile": "~7.1.0",
+    "hardhat-deploy": "^1.0.4",
     "qrcode": "~1.5.4"
   },
   "devDependencies": {

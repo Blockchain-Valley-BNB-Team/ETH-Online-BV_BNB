@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/packages/*/node_modules
+
 /.pnp
 .pnp.js
 
@@ -15,6 +17,7 @@
 
 # production
 /build
+/packages/express/build
 
 # misc
 .DS_Store
@@ -32,12 +35,19 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+/packages/express/.env
+/packages/express/.env.local
 
 # typescript
 *.tsbuildinfo
+
+# custom configs
 ipfs-upload.config.json
 
-*.tsbuildinfo
-ipfs-upload.config.json
+# Express logs (optional)
+packages/express/*.log
+packages/express/package-lock.json
+
+# Next.js cache
 .next/cache/
 .next/static/
