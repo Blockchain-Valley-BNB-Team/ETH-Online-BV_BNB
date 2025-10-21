@@ -37,7 +37,7 @@ class BiomniAgentService:
             raise Exception("Biomni is not installed")
         
         if self.agent is None:
-            llm = config.llm if config else "gemini-2.5-flash-preview-09-2025"
+            llm = config.llm if config else "gemini-2.5-flash-lite"
             data_path = "./data"
             use_tool_retriever = config.use_tool_retriever if config and hasattr(config, 'use_tool_retriever') else True
             timeout_seconds = config.timeout_seconds if config and hasattr(config, 'timeout_seconds') else 1200

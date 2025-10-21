@@ -2,7 +2,8 @@ import contextlib
 import re
 
 from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
+from biomni.llm import get_llm
+from biomni.config import default_config
 
 
 class ToolRetriever:
@@ -66,9 +67,9 @@ IMPORTANT GUIDELINES:
 8. When in doubt about a database tool or molecular biology tool, include it rather than exclude it
 """
 
-        # Use the provided LLM or create a new one
+        # Use the provided LLM or create a new one via unified factory
         if llm is None:
-            llm = ChatOpenAI(model="gpt-4o")
+            llm = get_llm(model=default_config.llm, temperature=0.0, config=default_config)
 
         # Invoke the LLM
         if hasattr(llm, "invoke"):

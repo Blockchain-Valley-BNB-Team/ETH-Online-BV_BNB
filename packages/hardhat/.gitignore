@@ -29,5 +29,7 @@ deployments/localhost
 # other
 temp
 
+
+.venv/
 ignition/deployments/*
 !ignition/deployments/localhost

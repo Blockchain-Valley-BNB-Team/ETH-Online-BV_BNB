@@ -35,7 +35,7 @@ def get_llm(
     # Use config values for any unspecified parameters
     if config is not None:
         if model is None:
-            model = config.llm_model
+            model = config.llm
         if temperature is None:
             temperature = config.temperature
         if source is None:
@@ -148,10 +148,16 @@ def get_llm(
             raise ImportError(  # noqa: B904
                 "langchain-openai package is required for Gemini models. Install with: pip install langchain-openai"
             )
+        # Prefer explicit api_key (including from config), then GEMINI_API_KEY, then GOOGLE_API_KEY
+        gemini_key = (
+            api_key
+            if (api_key is not None and api_key != "EMPTY")
+            else (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+        )
         return ChatOpenAI(
             model=model,
             temperature=temperature,
-            api_key=os.getenv("GEMINI_API_KEY"),
+            api_key=gemini_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             stop_sequences=stop_sequences,
         )
